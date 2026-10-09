@@ -1,0 +1,22 @@
+{
+  "name": "cc-cfp-marketplace",
+  "owner": {
+    "name": "Roland Huss"
+  },
+  "metadata": {
+    "description": "Local development marketplace for the cc-cfp plugin. Conference talk proposals and speaker bios with reusable conference profiles."
+  },
+  "plugins": [
+    {
+      "name": "cfp",
+      "version": "0.1.0",
+      "description": "Draft conference talk proposals (CFP submissions) and speaker bios interactively, using reusable conference profiles",
+      "author": {
+        "name": "Roland Huss"
+      },
+      "source": "./cfp",
+      "category": "productivity",
+      "license": "Apache-2.0"
+    }
+  ]
+}

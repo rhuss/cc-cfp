@@ -1,0 +1,16 @@
+{
+  "name": "cfp",
+  "version": "0.1.0",
+  "description": "Draft conference talk proposals (CFP submissions) and speaker bios interactively, using reusable conference profiles. Ships with a KubeCon + CloudNativeCon profile.",
+  "author": {
+    "name": "Roland Huss"
+  },
+  "license": "Apache-2.0",
+  "keywords": [
+    "cfp",
+    "conference",
+    "speaker",
+    "kubecon"
+  ],
+  "hooks": "./hooks.json"
+}
