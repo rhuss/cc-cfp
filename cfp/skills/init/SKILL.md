@@ -24,7 +24,7 @@ Ask (AskUserQuestion): "Where should the store live?" with the default and "Othe
 
 ## Step 2: Speaker name and company
 
-Ask for the speaker name (required, used in third-person bios and drafts). Then ask for the company (optional, used for the panel company rule).
+Ask for the speaker name (required, used in third-person bios and drafts). Then ask for the company or affiliation (optional, used in bios and by any conference rule that compares speaker affiliations). Do not ask for anything a specific conference's rules need beyond this; the draft flow collects co-speaker details when a session type requires them, and the pre-flight check names the config key to set when a rule cannot be evaluated.
 
 ## Step 3: Voice profile
 
