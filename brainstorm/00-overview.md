@@ -6,7 +6,7 @@ Last updated: 2026-10-09
 
 | # | Date | Topic | Status | Spec | Issue |
 |---|------|-------|--------|------|-------|
-| 01 | 2026-10-09 | cfp-plugin | active | - | - |
+| 01 | 2026-10-09 | cfp-plugin | spec-created | 001 | - |
 
 ## Open Threads
 - Exact current KubeCon character limits and Sessionize question labels; EU 2027 form live until 2026-10-11 (from #01)

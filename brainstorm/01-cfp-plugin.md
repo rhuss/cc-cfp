@@ -1,7 +1,7 @@
 # Brainstorm: CFP and Bio Plugin for Conference Submissions
 
 **Date:** 2026-10-09
-**Status:** active
+**Status:** spec-created (specs/001-cfp-plugin)
 **Research:** [research/kubecon-cfp-research.md](research/kubecon-cfp-research.md)
 
 ## Problem Framing
