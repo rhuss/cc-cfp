@@ -14,7 +14,7 @@ make install          # adds the local marketplace and installs cfp@cc-cfp-marke
 
 Requirements: Claude Code with plugin support and Python 3.10 or newer on `PATH`. The scripts use only the standard library and run with `python3 -I`, so no virtual environment is needed at runtime.
 
-Optional: the `prose` plugin (`prose:humanizer` skill) for the voice pass. Without it the voice pass is skipped with a notice.
+Optional: the `prose` plugin from [cc-prose](https://github.com/rhuss/cc-prose) (`prose:humanizer` skill) for the voice pass. Without it the voice pass is skipped with a notice.
 
 ## First run
 
@@ -68,7 +68,7 @@ Limits confirmed by a screenshot become `limit_status: screenshot` with the file
 
 ## Voice pass
 
-After a passing committee review, the title, abstract, reviewer-only relevance field, and bio snapshot are run through `prose:humanizer` with the voice profile from `config.md`. Voice profiles are the YAML files under `~/.claude/style/voices/` (or `.style/voices/` in a project). The pass changes only the proposal's bio snapshot, never the stored bio variation, and the character counts are rechecked afterwards.
+After a passing committee review, the title, abstract, reviewer-only relevance field, and bio snapshot are run through `prose:humanizer` from the [cc-prose](https://github.com/rhuss/cc-prose) plugin with the voice profile from `config.md`. Voice profiles are the YAML files under `~/.claude/style/voices/` (or `.style/voices/` in a project). The pass changes only the proposal's bio snapshot, never the stored bio variation, and the character counts are rechecked afterwards.
 
 ## Development
 
