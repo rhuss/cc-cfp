@@ -39,7 +39,7 @@ Subcommand reference: `python3 -I "$PLUGIN_ROOT/scripts/cfp_store.py" --help` (a
 
 - One question at a time, through AskUserQuestion. Never stack several questions in one message.
 - Where the effective profile defines choices (session type, track, audience level, bio variation, resources), offer exactly those choices; add a free-text option only when the profile allows it.
-- Show every generated text to the user before saving it, with its character count and the field's limit.
+- Show every generated or selected text to the user before saving or attaching it, with its character count and the field's limit. "Show" means: print the complete text verbatim in a fenced block in the assistant message, directly above the AskUserQuestion that asks what to do with it. A summary, a description of what the text covers, or a one-line excerpt does not count. The question text or option descriptions must never be the only place the text appears, because they are truncated in the UI. This applies to bios, abstracts, the benefits field, project lists, previously-presented notes, resource lines, and any shortened or voiced rewrite.
 - Never write em-dash or en-dash characters in generated prose. Use commas, periods, or parentheses.
 - Save progress at every step so an interrupted session can resume.
 - Never submit anything to a conference website and never fetch login-walled pages. Public CFP pages and links the user supplies are the only network access.

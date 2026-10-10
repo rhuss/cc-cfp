@@ -107,24 +107,24 @@ python3 -I "$PLUGIN_ROOT/scripts/cfp_store.py" proposal set-field --proposal <id
 
 ## Step 6: Field drafting
 
-Iterate `fields` from `profile show` in order. Skip `title` and `abstract` when already saved. For every field use its `guidance`, `limit`, `limit_status`, and `options`. After each save show `chars/limit` and the returned `status`; when `status` is `over`, offer to shorten right away and save again. Label unverified limits as approximate.
+Iterate `fields` from `profile show` in order. Skip `title` and `abstract` when already saved. For every field use its `guidance`, `limit`, `limit_status`, and `options`. For every generated field the message sequence is fixed: (1) a heading with the field label, (2) the complete drafted text in a fenced block, (3) the line `<chars>/<limit> chars` (approximate when unverified), (4) one AskUserQuestion with `save`, `change something`, `regenerate`. Never replace step 2 with a summary of what the text contains. After each save show `chars/limit` and the returned `status`; when `status` is `over`, offer to shorten right away, show the shortened text the same way, and save again. Label unverified limits as approximate.
 
 Per field kind:
 
 - `choice` and `boolean`: ask with AskUserQuestion, never generate. Track options come from the event's `tracks` list; audience level from the field `options`; `format` defaults to the chosen session type's name. Save choice fields with `proposal set-field --text-file`; for `track` and `audience_level` this one call also updates the front matter that pre-flight reads (no second `set-meta` call needed). Track names come from fetched pages, so they always travel through the text file, never as a shell argument.
 - Reviewer-only relevance field (`audience: reviewer`, `kind: longtext`, such as `benefits`): draft per `$PLUGIN_ROOT/knowledge-base/guidance/benefits-field.md` (who benefits by persona, why now, what is new, credentials and evidence, data shown; never restate the abstract). Run its checklist before showing the text.
 - `previously_presented`: build from the talk outings. With a `presented` outing inside the conference family in the last twelve months, describe the significant differences (new data, scope, results) and mention a link to slides or video. Otherwise state plainly that the talk has not been presented before.
-- `cncf_projects` and `open_source_projects`: build from the talk `projects`; ask the user to confirm exact names and links.
+- `cncf_projects` and `open_source_projects`: build from the talk `projects`; print the proposed list in a fenced block exactly as it will be saved (one project per line with its link where known), then ask the user to confirm or correct names and links.
 - `resources` kind: run `resource list`, offer recordings first and recommend one (FR-027: the Speaker criterion reaches its top level only with a recording). Let the user pick up to the form's maximum, then save with `proposal set-meta --proposal <id> --resources id,id`. When no recording exists, say so and suggest `/cfp:bio resource add` later.
-- Other `text` and `longtext` fields: draft per guidance, show, save.
+- Other `text` and `longtext` fields: draft per guidance, print the full text in a fenced block with its count, ask, save.
 
-Bio: run `bio list`. Show each variation with `chars` against `bio_limit` (`bio_limit_status` tells whether the limit is verified). Ask which one to use, then:
+Bio: run `bio list`. Show each variation with `chars` against `bio_limit` (`bio_limit_status` tells whether the limit is verified). Ask which one to use. Before attaching the chosen variation, run `bio show --name <name>` and print its complete text in a fenced block with `<chars>/<bio_limit> chars`, then ask to attach, shorten, or pick another. When the bio is drafted fresh inside this flow (no stored variation fits), the same rule applies: the complete bio text appears in a fenced block above the question that offers to save it. Then:
 
 ```bash
 python3 -I "$PLUGIN_ROOT/scripts/cfp_store.py" proposal set-meta --proposal <id> --bio "<name>"
 ```
 
-When the chosen bio is over the limit, offer to shorten it. Show the shortened text with its count, then write it to a file and run `proposal set-bio-text --proposal <id> --text-file <file>`. This changes only the proposal's snapshot; the stored variation stays untouched (FR-026). When no bios exist, offer to run the `cfp:bio` skill with `new` and continue afterwards.
+When the chosen bio is over the limit, offer to shorten it. Print the shortened text in full in a fenced block with its count, ask, then write it to a file and run `proposal set-bio-text --proposal <id> --text-file <file>`. This changes only the proposal's snapshot; the stored variation stays untouched (FR-026). When no bios exist, offer to run the `cfp:bio` skill with `new` and continue afterwards.
 
 Every field goes through:
 
@@ -156,7 +156,7 @@ For each of: `title`, `abstract`, the reviewer-only relevance field, and the bio
 
 - Skill tool reports the skill as unavailable: print "Voice pass skipped: prose plugin not installed" and go to Step 9. Texts stay as drafted.
 - Skill returns usage or help text instead of a rewrite: apply the humanizer core rules inline (no AI vocabulary, no rule-of-three padding, no inflated symbolism, varied sentence length, no em-dash or en-dash) and tell the user the rewrite was done inline.
-- Skill returns a rewrite: show it with its count against the limit. Keep the title's meaning; it is rewritten only for wording.
+- Skill returns a rewrite: print the full rewritten text in a fenced block with its count against the limit, then ask whether to keep it or the previous version. Keep the title's meaning; it is rewritten only for wording.
 
 Save each rewritten text with `proposal set-field` (or `proposal set-bio-text` for the bio), then:
 
