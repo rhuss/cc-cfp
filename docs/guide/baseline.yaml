@@ -1,0 +1,16 @@
+# Pinned sources and change requests (the baseline). Written by tools/guide/fetch.py.
+captured: '2026-11-26'
+sources:
+  - id: cfp
+    repo: rhuss/cc-cfp
+    ref: v0.1.0
+    commit: 05aedd276553c7dcb964d0d7fd2435199b14d9f8
+    attributes:
+      version: 0.1.0
+  - id: prose
+    repo: rhuss/cc-prose
+    ref: HEAD
+    commit: 8cb884b297e83e6002911c7cee8a0011fd016b31
+    attributes:
+      version: 1.2.0
+change_requests: []

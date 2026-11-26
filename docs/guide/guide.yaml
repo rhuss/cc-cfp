@@ -1,0 +1,63 @@
+# Guide project configuration (cc-guide schema 1).
+# Written by /guide:create from the intake interview; edit by hand when needed and
+# run `uv run tools/guide/guidecfg.py validate` afterwards. Unknown keys are errors.
+schema: 1
+
+# Shown on the site header and the PDF title page.
+title: "cc-cfp"
+
+# Output adapter: antora, mkdocs, or gfm. Fixed after create.
+format: "antora"
+
+# One reader: someone who installs cfp, drafts proposals and bios, maintains
+# conference profiles, and may look into the plugin internals.
+personas:
+  - id: user
+    title: User
+    start: user/index
+
+# Navigation sections in reading order. `voice` is a cc-prose voice profile.
+sections:
+  - id: overview
+    title: Overview
+    voice: conversational
+  - id: user
+    title: Using cfp
+    voice: tutorial
+  - id: profiles
+    title: Conference profiles
+    voice: tutorial
+  - id: internals
+    title: Internals
+    voice: technical
+  - id: reference
+    title: Reference
+    voice: reference
+
+# fast (final review only), standard (per-page reviews, the default), or strict
+# (standard plus the claim ledger). A run can override it with --rigor.
+rigor: standard
+
+# In-repo guide: no internal part. Confidential terms and patterns live in
+# confidential.local.yaml (git-ignored).
+internal:
+  enabled: false
+  confidential_terms: []
+  confidential_patterns: []
+
+clusters: {}
+
+validate:
+  extra_queries: []
+
+# Scheduled drift check (.github/workflows/guide-drift.yml): "off" or a cron expression.
+drift:
+  schedule: "17 6 * * 1"
+
+upstream:
+  target: github
+
+branding:
+  wordmark: cc-cfp
+  theme: neutral
+  footer: none

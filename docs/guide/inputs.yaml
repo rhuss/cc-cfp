@@ -1,0 +1,54 @@
+# Input register: transcripts, tickets, links, notes, and documents that inform the
+# guide. Only references live here; raw inputs are never copied into this project,
+# and a location inside the project is rejected. Claims from inputs reach a page only
+# after they are verified against a pinned source.
+inputs:
+  - id: spec-001
+    kind: document
+    location: ~/Development/context-engineering/cc-cfp/specs/001-cfp-plugin
+    role: feature spec, plan, data model, contracts, quickstart, and smoke test of the cfp plugin
+    sha256: "10a4b1f7ce4167cc57763ad31b8176f4072258996df98d26401b7f917377a6d3"
+    confidential: false
+    registered: "2026-11-26"
+  - id: brainstorm
+    kind: notes
+    location: ~/Development/context-engineering/cc-cfp/brainstorm
+    role: brainstorm overview, cfp plugin brainstorm, idea inbox, and research notes
+    sha256: "d8a0d1d457f594909f02992a864cf8e7219720aaa80ec6923ae3bb7c77dd3743"
+    confidential: false
+    registered: "2026-11-26"
+  - id: rh-summit-profile
+    kind: document
+    location: ~/Obsidian/ro14nd/09-Talks/profiles/rh-summit
+    role: worked example of a second conference profile (Red Hat Summit, RainFocus) researched with /cfp:profile
+    sha256: "6905ce041f0e0086b6af9bee6531c8ef31f30308ee2a5daa17ddc6dc67dcbcca"
+    confidential: false
+    registered: "2026-11-26"
+  - id: kubecon-cfp-eu
+    kind: link
+    location: https://events.linuxfoundation.org/kubecon-cloudnativecon-europe/program/cfp/
+    role: public KubeCon EU CFP page behind the shipped profile
+    sha256: ""
+    confidential: false
+    registered: "2026-11-26"
+  - id: kubecon-cfp-na
+    kind: link
+    location: https://events.linuxfoundation.org/kubecon-cloudnativecon-north-america/program/cfp/
+    role: public KubeCon NA CFP page behind the shipped profile
+    sha256: ""
+    confidential: false
+    registered: "2026-11-26"
+  - id: kubecon-reviewer-guidelines
+    kind: link
+    location: https://events.linuxfoundation.org/kubecon-cloudnativecon-europe/program/submission-reviewer-guidelines/
+    role: KubeCon reviewer guidelines behind the committee review rubric
+    sha256: ""
+    confidential: false
+    registered: "2026-11-26"
+  - id: sessionize-kubecon-eu-2027
+    kind: link
+    location: https://sessionize.com/kubecon-cloudnativecon-europe-2027/
+    role: KubeCon EU 2027 Sessionize CFP page
+    sha256: ""
+    confidential: false
+    registered: "2026-11-26"
