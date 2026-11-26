@@ -68,7 +68,7 @@ def test_init_store_creates_tree_config_and_seeds(tmp_store, tmp_home):
 
     meta, _ = frontmatter.load(profile_file)
     assert meta["approved"] is True
-    assert meta["seed_version"] == "2026-10-09"
+    assert meta["seed_version"] == "2026-10-11"
 
 
 def test_init_store_does_not_overwrite_existing_profile(tmp_store, tmp_home):

@@ -59,11 +59,11 @@ def test_set_field_writes_section_and_reports_status(with_proposal):
     assert result == {"field": "title", "chars": 16, "limit": 75, "limit_status": "unverified", "status": "unverified"}
     over = proposals.set_field(s, pid, "title", "x" * 80, today=TODAY)
     assert over["status"] == "over" and over["chars"] == 80
-    nolimit = proposals.set_field(s, pid, "cncf_projects", "Kubernetes, Argo", today=TODAY)
+    nolimit = proposals.set_field(s, pid, "cncf_oss_projects", "Kubernetes, Argo", today=TODAY)
     assert nolimit["status"] == "no-limit" and nolimit["limit"] is None
     shown = proposals.show(s, pid)
     assert shown["fields"]["title"] == "x" * 80
-    assert shown["fields"]["cncf_projects"] == "Kubernetes, Argo"
+    assert shown["fields"]["cncf_oss_projects"] == "Kubernetes, Argo"
     assert shown["updated"] == TODAY
 
 
@@ -107,12 +107,12 @@ def test_set_field_choice_validation_and_meta_sync(with_proposal):
 
 def test_fields_are_kept_in_form_order(with_proposal):
     s, pid = with_proposal
-    proposals.set_field(s, pid, "benefits", "B", today=TODAY)
+    proposals.set_field(s, pid, "value_to_community", "B", today=TODAY)
     proposals.set_field(s, pid, "title", "T", today=TODAY)
     proposals.set_bio_text(s, pid, "Bio", today=TODAY)
     proposals.set_field(s, pid, "abstract", "A", today=TODAY)
     _, body = store.load(store.proposal_path(s, pid))
-    assert list(frontmatter.sections(body).keys()) == ["Field: title", "Field: abstract", "Field: benefits", "Bio"]
+    assert list(frontmatter.sections(body).keys()) == ["Field: title", "Field: abstract", "Field: value_to_community", "Bio"]
 
 
 def test_set_meta_updates_keys_and_bio_snapshot(with_proposal):
@@ -159,7 +159,7 @@ def test_set_bio_text_replaces_only_snapshot(with_proposal):
     bios.write_bio(s, "short", "cloud-native", 450, "Original stored bio.", today=TODAY)
     proposals.set_meta(s, pid, bio="short", today=TODAY)
     result = proposals.set_bio_text(s, pid, "Shortened snapshot.", today=TODAY)
-    assert result == {"chars": 19, "limit": 500, "limit_status": "unverified", "status": "unverified"}
+    assert result == {"chars": 19, "limit": 500, "limit_status": "screenshot", "status": "ok"}
     assert proposals.show(s, pid)["bio"] == "Shortened snapshot."
     assert proposals.show(s, pid)["bio_variation"] == "short"
     assert bios.show_bio(s, "short")["text"] == "Original stored bio."

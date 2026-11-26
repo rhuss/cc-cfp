@@ -33,7 +33,7 @@ def test_effective_merge_with_seed_event(seeded_store):
     assert eff["approved"] is True
     assert eff["profile"]["id"] == "kubecon"
     assert eff["event"]["id"] == "kubecon-eu-2027"
-    assert eff["bio_limit"] == 500 and eff["bio_limit_status"] == "unverified"
+    assert eff["bio_limit"] == 500 and eff["bio_limit_status"] == "screenshot"
     assert "value proposition" in eff["drafting_guidance"]
     assert "Seeded from" in eff["notes"]
 

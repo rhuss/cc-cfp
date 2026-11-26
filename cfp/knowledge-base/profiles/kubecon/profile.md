@@ -3,7 +3,7 @@ id: kubecon
 name: KubeCon + CloudNativeCon
 platform: sessionize
 approved: true
-seed_version: "2026-10-09"
+seed_version: "2026-10-11"
 sources:
   - https://events.linuxfoundation.org/kubecon-cloudnativecon-europe/program/cfp/
   - https://events.linuxfoundation.org/kubecon-cloudnativecon-north-america/program/cfp/
@@ -52,25 +52,25 @@ fields:
     limit_status: unverified
     source: ""
     audience: public
-    guidance: Title case. Must follow the LF Inclusive Language Initiative. Attendees pick talks by title, so name the concrete technology or outcome. Historic limit 75 characters, not confirmed on the live form.
+    guidance: Title case. Must follow the LF Inclusive Language Initiative. Attendees pick talks by title, so name the concrete technology or outcome. Historic limit 75 characters, not confirmed on the live form. No speaker or company names in the title.
   - id: abstract
-    label: Session Description
-    required: true
-    kind: longtext
-    limit: 1300
-    limit_status: unverified
-    source: ""
-    audience: public
-    guidance: Emphasize the problem, your contribution, and its relevance. The first two sentences carry the value proposition. Full sentences, third person (use the speaker name instead of I), no bullet lists. State takeaways explicitly. Published verbatim on the schedule. Historic limit 1300 characters.
-  - id: benefits
-    label: Benefits to the Ecosystem
+    label: Description
     required: true
     kind: longtext
     limit: 1000
-    limit_status: unverified
-    source: ""
+    limit_status: screenshot
+    source: screenshot:sessionize-kubecon-eu-2027-2026-10-11
+    audience: public
+    guidance: Describe what attendees will learn, who the talk is for, and the key takeaways. Problem in the first two sentences, then the contribution, then explicit takeaways. Full sentences, session-centric (no speaker or company names), no bullet lists. Hard limit 1000 characters, confirmed on the live form.
+  - id: value_to_community
+    label: Value to the community
+    required: true
+    kind: longtext
+    limit:
+    limit_status: screenshot
+    source: screenshot:sessionize-kubecon-eu-2027-2026-10-11
     audience: reviewer
-    guidance: Reviewer-only. The second determining factor after the abstract. Say who benefits (by persona), why now, what is new compared with prior talks, your credentials and evidence, and what data or case study you will show. Do not restate the abstract. Historic limit 1000 characters.
+    guidance: Why is this talk important, relevant, and timely to the cloud native ecosystem? Name who benefits and what changed now that makes it timely; do not restate the abstract. No character limit shown on the form.
   - id: audience_level
     label: Level of Expertise for Intended Audience
     required: true
@@ -102,13 +102,13 @@ fields:
     audience: public
     guidance: Matches the chosen session type.
   - id: case_study
-    label: Is this a case study?
+    label: Case study?
     required: true
     kind: boolean
     audience: reviewer
     guidance: Yes when the talk reports on an organization's real-world implementation of a practice, product, system, or service and how well it worked. End-user case studies are favored for program balance.
   - id: previously_presented
-    label: Has this presentation been given before?
+    label: Talk presented before?
     required: true
     kind: longtext
     limit:
@@ -116,33 +116,24 @@ fields:
     source: ""
     audience: reviewer
     guidance: If the talk was given at a CNCF or LF event within the past year, explain the significant differences (new data, new scope, new results). Otherwise state that it has not been presented before. Mention a link to slides or video of the previous outing when one exists.
-  - id: cncf_projects
-    label: CNCF-hosted software
+  - id: cncf_oss_projects
+    label: Relevant CNCF/Open Source Projects
     required: true
     kind: text
     limit:
-    limit_status: unverified
-    source: ""
+    limit_status: screenshot
+    source: screenshot:sessionize-kubecon-eu-2027-2026-10-11
     audience: reviewer
-    guidance: Comma-separated CNCF project names (graduated, incubating, or sandbox) as listed on the form that the presentation focuses on. Use the exact project names.
-  - id: open_source_projects
-    label: Open source projects
-    required: true
-    kind: text
-    limit:
-    limit_status: unverified
-    source: ""
-    audience: reviewer
-    guidance: All open source projects discussed, with links, including non-CNCF projects.
+    guidance: List the CNCF project(s) featured in your presentation, plus any other open source projects discussed. Use exact project names, with links where useful.
   - id: resources
-    label: Additional Resources
+    label: Additional resources
     required: false
-    kind: resources
+    kind: longtext
     limit:
-    limit_status: unverified
-    source: ""
+    limit_status: screenshot
+    source: screenshot:sessionize-kubecon-eu-2027-2026-10-11
     audience: reviewer
-    guidance: Optional on the form but decisive for the Speaker criterion. Link a video or audio recording of a previous talk first. Up to three resources, each with a type (Presentation Recording, Published Book, Personal Website, Open Source Project, Other) and a link. Without a recording, a short self-recorded YouTube video is suggested by the LF page.
+    guidance: "Free text on the live form. Put speaker evidence here: recordings of previous talks for every speaker (the Speaker criterion reaches 5 only with recordings), project links, books, websites. Keep credentials out of the public abstract."
 rubric:
   scale_max: 5
   pass_average: 4.0
@@ -220,21 +211,29 @@ rejection_reasons:
   - Rule violations that remove the proposal from review (more than 3 submissions, 3 or more speakers all identifying as men, panelists from a single company, panelists not named at submission)
   - Program balance rather than quality (same speaker or company already selected, too many talks in one niche, diversity targets)
 bio_limit: 500
-bio_limit_status: unverified
+bio_limit_status: screenshot
 ---
 
 ## Drafting guidance
 
 Reviewers in a track handle 100 to 200 proposals each and score in Sessionize star-rating mode. The first sentence of the abstract is where the proposal makes its impression, and the first two sentences must carry the value proposition: what problem the audience has and what the session gives them. Acceptance has fallen to around 8 to 11 percent, so a generic abstract on a hot topic loses to a specific one.
 
-Write the abstract in third person with the speaker's name instead of "I". Use full sentences and short paragraphs, never a bullet list. Emphasize the problem, the contribution, and its relevance, with technical details that do not lose the big picture. State the takeaways explicitly ("Attendees will leave with ..."). Co-chairs look for the full story: the hard parts, what was learned, what is still unknown. An honest ending beats a perfect one.
+Write the abstract session-centric, not person-centric: refer to the talk as "this session" and do not name the speakers or their employers (accepted KubeCon abstracts almost never do; names and companies belong in the speaker profile and the bio). A role statement such as "both speakers are active in the X community" is acceptable. "We" appears in accepted abstracts but "I" does not. Use full sentences and short paragraphs, never a bullet list. When the session includes a live demo, say so and name what the demo shows; accepted abstracts state this explicitly. Emphasize the problem, the contribution, and its relevance, with technical details that do not lose the big picture. State the takeaways explicitly ("Attendees will leave with ..."). Co-chairs look for the full story: the hard parts, what was learned, what is still unknown. An honest ending beats a perfect one.
 
-The benefits field is reviewer-only and is the second determining factor after the abstract. It is not a copy of the abstract. Say who benefits by persona and what each gains, why the topic matters now, what is new versus prior talks, which credentials and evidence back the speaker, and what data or case study the session shows.
+The "Value to the community" field (formerly "Benefits to the Ecosystem") is reviewer-only and is the second determining factor after the abstract. It is not a copy of the abstract. Say who benefits by persona and what each gains, why the topic matters now, what is new versus prior talks, which credentials and evidence back the speaker, and what data or case study the session shows.
 
 Pick the track carefully; many strong proposals are submitted under the wrong track. Choose the audience level the abstract really serves, because reviewers correct mismatches and penalize them. Link a recording of a previous talk in the resources field, since the Speaker criterion only reaches 5 stars with recorded examples of engaging talks. Focus on open source project work and keep vendor or product language out of every field. Reviewers prefer a typo over AI-flattened text, so keep the speaker's own phrasing.
 
-The character limits in this profile (title 75, abstract 1300, benefits 1000, bio 500) are historic values from older forms and templates. The live Sessionize form sits behind a login, so treat them as soft targets until confirmed with screenshots.
+Live-form requirements (confirmed from the Sessionize form on 2026-10-11): the Description (abstract) has a hard limit of 1000 characters. The reviewer-only relevance field is now "Value to the community" (why the talk is important, relevant, and timely), replacing the former "Benefits to the Ecosystem"; no character limit is shown. CNCF and other open source projects are now a single combined field. The bio limit is 500 characters. A Content Quality Agreement warns that AI-generated slop can remove a submission from review and ban the speaker from future CNCF CFPs, so keep the speaker's own phrasing and avoid AI-flattened text.
 
 ## Notes
 
 Seeded from brainstorm/research/kubecon-cfp-research.md on 2026-10-09. Co-located Day 0 events, the project benefits CFP (Maintainer Track, Project Lightning Talks, ContribFest), and the Maintainer Summit use separate Sessionize CFPs with different formats and limits; they need their own profiles or event overrides.
+
+2026-10-10: abstract guidance changed to session-centric wording (no speaker or company names in abstract or title, state demos explicitly) after checking accepted abstracts on the KubeCon NA 2025 schedule (kccncna2025.sched.com, Security track).
+
+2026-10-11: updated to the live Sessionize form. Abstract limit 1000 (confirmed), bio 500 (confirmed), benefits replaced by value_to_community, cncf_projects and open_source_projects merged into cncf_oss_projects, track strings aligned to the form (AI Inference + Infrastructure, Platform Engineering: DevEx + IDPs).
+
+2026-10-11: resources field changed to free text (longtext) to match the live form.
+
+2026-10-11: seed updated to the live form (seed_version 2026-10-11); limits confirmed by screenshot are marked `screenshot`, the rest remain `unverified`.

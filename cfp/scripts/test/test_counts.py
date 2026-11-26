@@ -27,24 +27,24 @@ def test_count_proposal_statuses(seeded_store, pid):
     s = seeded_store
     proposals.set_field(s, pid, "title", "x" * 76, today=TODAY)
     proposals.set_field(s, pid, "abstract", "An abstract.", today=TODAY)
-    proposals.set_field(s, pid, "cncf_projects", "Kubernetes", today=TODAY)
+    proposals.set_field(s, pid, "cncf_oss_projects", "Kubernetes", today=TODAY)
     bios.write_bio(s, "b", "ai", 500, "y" * 501, today=TODAY)
     proposals.set_meta(s, pid, bio="b", today=TODAY)
 
     result = counts.count_proposal(s, pid)
     by_id = {f["id"]: f for f in result["fields"]}
     assert [f["id"] for f in result["fields"]] == [
-        "title", "abstract", "benefits", "audience_level", "track", "format", "case_study",
-        "previously_presented", "cncf_projects", "open_source_projects", "resources",
+        "title", "abstract", "value_to_community", "audience_level", "track", "format", "case_study",
+        "previously_presented", "cncf_oss_projects", "resources",
     ]
     assert by_id["title"] == {"id": "title", "label": "Session Title", "required": True, "chars": 76, "limit": 75, "limit_status": "unverified", "status": "over", "drafted": True}
-    assert by_id["abstract"]["chars"] == 12 and by_id["abstract"]["status"] == "unverified"
-    assert by_id["cncf_projects"]["status"] == "no-limit" and by_id["cncf_projects"]["limit"] is None
-    assert by_id["benefits"]["chars"] == 0 and by_id["benefits"]["drafted"] is False and by_id["benefits"]["status"] == "unverified"
+    assert by_id["abstract"]["chars"] == 12 and by_id["abstract"]["status"] == "ok"
+    assert by_id["cncf_oss_projects"]["status"] == "no-limit" and by_id["cncf_oss_projects"]["limit"] is None
+    assert by_id["value_to_community"]["chars"] == 0 and by_id["value_to_community"]["drafted"] is False and by_id["value_to_community"]["status"] == "no-limit"
     assert by_id["resources"]["required"] is False
     assert result["over"] == ["title"]
-    assert result["missing_required"] == ["benefits", "audience_level", "track", "format", "case_study", "previously_presented", "open_source_projects"]
-    assert result["bio"] == {"chars": 501, "limit": 500, "limit_status": "unverified", "status": "over", "drafted": True}
+    assert result["missing_required"] == ["value_to_community", "audience_level", "track", "format", "case_study", "previously_presented"]
+    assert result["bio"] == {"chars": 501, "limit": 500, "limit_status": "screenshot", "status": "over", "drafted": True}
     assert result["proposal"] == pid
 
 
@@ -56,7 +56,7 @@ def test_count_at_limit_is_not_over(seeded_store, pid):
     result = counts.count_proposal(s, pid)
     title = next(f for f in result["fields"] if f["id"] == "title")
     assert title["chars"] == 75 and title["status"] == "unverified"
-    assert result["bio"]["chars"] == 500 and result["bio"]["status"] == "unverified"
+    assert result["bio"]["chars"] == 500 and result["bio"]["status"] == "ok"
     assert result["over"] == []
 
 

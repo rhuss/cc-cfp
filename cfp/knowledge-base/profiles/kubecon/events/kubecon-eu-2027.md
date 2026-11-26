@@ -14,8 +14,8 @@ sources:
   - https://events.linuxfoundation.org/kubecon-cloudnativecon-europe/program/cfp/
   - https://sessionize.com/kubecon-cloudnativecon-europe-2027/
 tracks:
+  - AI Inference + Infrastructure
   - Agentic AI
-  - AI Inference and Infrastructure
   - Cloud Native Application Development
   - Cloud Native Experience
   - Cloud Native Novice
@@ -24,7 +24,7 @@ tracks:
   - Emerging + Advanced
   - Observability
   - Operations + Performance
-  - "Platform Engineering: DevEx & IDPs"
+  - "Platform Engineering: DevEx + IDPs"
   - "Platform Engineering: Infrastructure & Delivery"
   - Security
 submission_limit: 3
@@ -36,4 +36,4 @@ field_overrides: []
 
 ## Notes
 
-CFP closes 11 Oct 2026 at 23:59 CEST. Schedule announced 9 Dec 2026. Program committee review 13 to 25 Oct, track chairs 26 Oct to 6 Nov, co-chairs 16 to 27 Nov 2026. Poster sessions are offered at this edition.
+CFP closes 11 Oct 2026 at 23:59 CEST. Schedule announced 9 Dec 2026. Program committee review 13 to 25 Oct, track chairs 26 Oct to 6 Nov, co-chairs 16 to 27 Nov 2026. Poster sessions are offered at this edition. Tracks aligned to the live form on 2026-10-11.

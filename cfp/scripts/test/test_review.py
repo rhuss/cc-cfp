@@ -21,7 +21,7 @@ def pid(seeded_store):
     pid = proposals.create(s, "t", "kubecon", EVENT, "session", angle="problem-first", today=TODAY)["id"]
     proposals.set_field(s, pid, "title", "A Title", today=TODAY)
     proposals.set_field(s, pid, "abstract", "An abstract.", today=TODAY)
-    proposals.set_field(s, pid, "benefits", "Benefits.", today=TODAY)
+    proposals.set_field(s, pid, "value_to_community", "Benefits.", today=TODAY)
     proposals.set_field(s, pid, "audience_level", "Intermediate", today=TODAY)
     proposals.set_field(s, pid, "track", "Security", today=TODAY)
     bios.write_bio(s, "b", "ai", 500, "Bio.", today=TODAY)
@@ -54,7 +54,7 @@ def test_packet_contents(seeded_store, pid):
     assert packet["examples"][0]["title"] == "Ex 3"
     assert all(set(e) >= {"title", "abstract", "benefits", "event", "year", "origin"} for e in packet["examples"])
     assert packet["fields"][0] == {"id": "title", "label": "Session Title", "audience": "public", "required": True, "text": "A Title"}
-    assert next(f for f in packet["fields"] if f["id"] == "benefits")["audience"] == "reviewer"
+    assert next(f for f in packet["fields"] if f["id"] == "value_to_community")["audience"] == "reviewer"
     assert packet["audience_level"] == "Intermediate" and packet["track"] == "Security"
     assert packet["session_type"]["id"] == "session" and packet["session_type"]["duration_min"] == 30
     assert packet["bio"] == "Bio."

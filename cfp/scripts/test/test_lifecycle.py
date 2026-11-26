@@ -22,7 +22,7 @@ def make_proposal(store_path, talk_id="my-talk", event_id="kubecon-eu-2027", sta
     proposal_id = store.proposal_id(event_id, talk_id)
     meta.update({"id": proposal_id, "talk": talk_id, "profile": "kubecon", "event": event_id, "status": status})
     meta.update(meta_overrides)
-    fields = fields or {"title": "A Title", "abstract": "An abstract.", "benefits": "Benefits text."}
+    fields = fields or {"title": "A Title", "abstract": "An abstract.", "value_to_community": "Benefits text."}
     for field_id, text in fields.items():
         body = frontmatter.set_section(body, f"Field: {field_id}", text)
     store.save(store.proposal_path(store_path, proposal_id), meta, body)

@@ -58,7 +58,7 @@ Files can be edited by hand as long as the front matter stays valid. A file with
 
 ## Confirming the KubeCon limits
 
-The shipped profile uses the historic character limits (title 75, abstract 1300, benefits 1000, bio 500). The live Sessionize form sits behind a login, so these are marked `unverified` and the paste view labels them as approximate. To confirm them, open the form, take screenshots of each page, and run:
+The shipped profile carries the limits confirmed on the KubeCon EU 2027 Sessionize form (abstract 1000, bio 500, marked `screenshot`) and the historic title limit of 75 (marked `unverified`, the paste view labels it as approximate). The reviewer-only relevance field is `value_to_community` and CNCF plus other open source projects share one field, `cncf_oss_projects`. The live form sits behind a login, so to re-confirm limits for a new edition, open the form, take screenshots of each page, and run:
 
 ```text
 /cfp:profile refresh kubecon --event kubecon-eu-2027 --screenshots ~/Desktop/form-1.png,~/Desktop/form-2.png

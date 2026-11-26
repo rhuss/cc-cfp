@@ -69,7 +69,7 @@ def test_profile_subcommands(seeded_store, run_cli, write_json):
     shown = run_cli("profile", "show", "--profile", "kubecon", "--event", "kubecon-eu-2027")
     assert len(shown["tracks"]) == 13
     assert next(t for t in shown["session_types"] if t["id"] == "tutorial")["duration_min"] == 80
-    assert all(f.get("limit_status", "unverified") == "unverified" for f in shown["fields"] if f.get("limit"))
+    assert {f["id"]: f["limit_status"] for f in shown["fields"] if f.get("limit")} == {"title": "unverified", "abstract": "screenshot"}
 
     valid = run_cli("profile", "validate", "--profile", "kubecon", "--event", "kubecon-eu-2027")
     assert valid["valid"] is True and valid["problems"] == []

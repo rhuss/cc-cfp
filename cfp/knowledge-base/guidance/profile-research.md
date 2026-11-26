@@ -82,14 +82,13 @@ Use snake_case ids so the drafting skill can recognize the same field across con
 
 - `title`: session title
 - `abstract`: session description or abstract (public)
-- `benefits`: reviewer-only relevance field (benefits to the ecosystem, notes to reviewers)
+- `value_to_community` (or `benefits` on older forms): reviewer-only relevance field (value to the community, benefits to the ecosystem, notes to reviewers)
 - `audience_level`: level of expertise for the intended audience
 - `track`: track or topic selection
 - `format`: session format or type selection
 - `case_study`: boolean, is this an end-user case study
 - `previously_presented`: boolean or text about prior outings of the talk
-- `cncf_projects`: CNCF-hosted projects the talk focuses on
-- `open_source_projects`: all open source projects discussed, with links
+- `cncf_oss_projects`: CNCF projects featured plus all other open source projects discussed, with links (older forms split this into `cncf_projects` and `open_source_projects`)
 - `resources`: additional resources such as prior recordings (kind `resources`)
 - `bio`: speaker biography, when the form asks for it per submission
 
