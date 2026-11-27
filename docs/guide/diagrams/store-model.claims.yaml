@@ -1,0 +1,151 @@
+diagram: store-model
+claims:
+  - id: user-config
+    kind: label
+    elements: [ucfg]
+    text: "The user config ~/.config/cc-cfp/config.json holds {\"store\": path}, the path of the store."
+    sources:
+      - "cfp:cfp/scripts/cfplib/config.py:3,26-45"
+  - id: user-config-to-store
+    kind: connects
+    elements: [a_ucfg_store]
+    text: >-
+      cfp finds the store through the store path in the user config (after --store and the
+      CFP_STORE environment variable, which take precedence).
+    sources:
+      - "cfp:cfp/scripts/cfplib/config.py:26-55"
+  - id: store-frame
+    kind: contains
+    elements: [fr_store, fr_store_title, config, talk, proposal, bio, resource, fr_prof, a_prop_talk, a_prop_outing, a_prop_event, a_prop_example, a_prop_bio, a_prop_res]
+    text: >-
+      The store folder holds config.md and five folders: profiles, talks, proposals, bios, and
+      resources.
+    sources:
+      - "cfp:README.md:47-57"
+      - "cfp:cfp/scripts/cfplib/config.py:15"
+  - id: store-sub
+    kind: label
+    elements: [fr_store_sub]
+    text: "Every store file is plain markdown with YAML front matter and may be edited by hand as long as the front matter stays valid."
+    sources:
+      - "cfp:README.md:45,59"
+  - id: config-md
+    kind: label
+    elements: [config]
+    text: "config.md holds the speaker settings: speaker name, company, voice profile, review rounds, default profile."
+    sources:
+      - "cfp:README.md:49"
+      - "cfp:cfp/scripts/cfplib/config.py:16-22"
+  - id: profiles-frame
+    kind: contains
+    elements: [fr_prof, fr_prof_title, profile, event, example, a_event_profile]
+    text: >-
+      A profile family folder profiles/<family>/ holds profile.md, the event overrides in
+      events/, and the calibration examples in examples/.
+    sources:
+      - "cfp:README.md:50-52"
+      - "cfp:cfp/scripts/cfplib/store.py:67-80"
+  - id: profile
+    kind: label
+    elements: [profile]
+    text: "profile.md holds the session types, form fields with limits, rubric, rules, and rejection reasons."
+    sources:
+      - "cfp:README.md:50"
+      - "cfp:cfp/scripts/cfplib/store.py:67-72"
+  - id: event
+    kind: label
+    elements: [event]
+    text: "events/<event>.md holds the per-edition overrides: dates, tracks, submission limit, session type variations."
+    sources:
+      - "cfp:README.md:51"
+      - "cfp:cfp/scripts/cfplib/store.py:75-76"
+  - id: example
+    kind: label
+    elements: [example]
+    text: "examples/<id>.md holds calibration examples (accepted texts, official samples)."
+    sources:
+      - "cfp:README.md:52"
+      - "cfp:cfp/scripts/cfplib/store.py:79-80"
+  - id: talk
+    kind: label
+    elements: [talk]
+    text: "talks/<talk>.md is the conference-independent story."
+    sources:
+      - "cfp:README.md:53"
+      - "cfp:cfp/scripts/cfplib/talks.py:5-6"
+  - id: proposal
+    kind: label
+    elements: [proposal]
+    text: "proposals/<event>--<talk>.md is one talk rendered for one event."
+    sources:
+      - "cfp:README.md:54"
+      - "cfp:cfp/scripts/cfplib/store.py:55-56"
+  - id: bio
+    kind: label
+    elements: [bio]
+    text: "bios/<name>.md holds one bio variation (name, emphasis, target length, text)."
+    sources:
+      - "cfp:README.md:55"
+      - "cfp:cfp/scripts/cfplib/bios.py:21-39"
+  - id: resource
+    kind: label
+    elements: [resource]
+    text: "resources/<id>.md holds one speaker resource (recording, repository, blog, session, publication, other) with title and link."
+    sources:
+      - "cfp:README.md:56"
+      - "cfp:cfp/scripts/cfplib/bios.py:5,85-122"
+  - id: proposal-to-talk
+    kind: connects
+    elements: [a_prop_talk]
+    text: >-
+      The proposal id joins the event id and the talk id, and the proposal front matter names the
+      talk; there is one proposal per talk and event pair.
+    sources:
+      - "cfp:cfp/scripts/cfplib/store.py:55-56"
+      - "cfp:cfp/scripts/cfplib/proposals.py:151-154,159-162"
+  - id: proposal-to-event
+    kind: connects
+    elements: [a_prop_event]
+    text: >-
+      The proposal id joins the event id and the talk id, and the proposal front matter names the
+      event (and its profile family).
+    sources:
+      - "cfp:cfp/scripts/cfplib/store.py:55-56"
+      - "cfp:cfp/scripts/cfplib/proposals.py:151-154,159-162"
+  - id: event-overrides-profile
+    kind: connects
+    elements: [a_event_profile]
+    text: "An event file overrides its family profile: cfp merges session types, fields, tracks, and the submission limit of the event onto the profile."
+    sources:
+      - "cfp:cfp/scripts/cfplib/profile.py:204-261"
+  - id: proposal-bio-snapshot
+    kind: connects
+    elements: [a_prop_bio]
+    text: >-
+      Choosing a bio variation stores the variation name in the proposal and copies the bio text
+      into the proposal's Bio section; later edits to the variation do not change the proposal.
+    sources:
+      - "cfp:cfp/scripts/cfplib/proposals.py:295-303,352-356"
+  - id: proposal-resources
+    kind: connects
+    elements: [a_prop_res]
+    text: >-
+      The proposal stores the ids of the chosen resources (and, when the form has a resources field,
+      their title and link as text).
+    sources:
+      - "cfp:cfp/scripts/cfplib/proposals.py:305-311,357-363"
+  - id: accepted-adds-example
+    kind: connects
+    elements: [a_prop_example]
+    text: "Setting a proposal to accepted adds its title, abstract, and benefits as a calibration example of its profile family."
+    sources:
+      - "cfp:cfp/scripts/cfplib/lifecycle.py:90-119,166-167"
+  - id: presented-adds-outing
+    kind: connects
+    elements: [a_prop_outing]
+    text: "Setting a proposal to presented records an outing (event, family, date) on its talk."
+    sources:
+      - "cfp:cfp/scripts/cfplib/lifecycle.py:122-137,168-169"
+  - id: legend
+    kind: legend
+    elements: [lg_title, lg_blue, lg_blue_t, lg_orange, lg_orange_t]
