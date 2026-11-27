@@ -11,16 +11,18 @@
 // cfp:cfp/scripts/cfplib/lifecycle.py:90-119,166-167
 // cfp:cfp/scripts/cfplib/profile.py:476-499
 // cfp:cfp/scripts/cfplib/proposals.py:85-105
+// cfp:cfp/skills/status/SKILL.md:46
 // cfp:cfp/scripts/cfp_store.py:2-9,68-69,237-238,531-532
 // cfp:README.md:37,40,52,61,73-75
 // prose:README.md:239-242
+// prose:prose/skills/humanizer/SKILL.md:5
 // prose:prose/docs/harnesses.md:31-34
 // url:https://code.claude.com/docs/en/sub-agents.md
 // url:https://code.claude.com/docs/en/skills.md
 
 Before you paste a proposal into a conference form, you'd like someone strict to read it the way a program committee member would.
 That's the committee review: a simulated program committee round that scores your proposal against the conference's rubric and tells you what to fix.
-After a passing review, the voice pass reworks your title, abstract, reviewer-only text, and bio snapshot to remove signs of AI-generated writing.
+After a passing review, the voice pass reworks your title, abstract, reviewer-only relevance field, and bio snapshot to remove signs of AI-generated writing.
 This page explains both.
 xref:user/draft.adoc[Draft a proposal] shows where they sit in the `/cfp:draft` flow, and xref:user/index.adoc[Using cfp] explains the terms talk, proposal, profile, and bio snapshot.
 
@@ -74,7 +76,7 @@ Here's how it gets to a score:
 . It writes exactly two sentences per criterion: first the judgment, then the evidence, quoting or pointing to a phrase, gap, or claim in your text.
 . It walks through the rejection reasons one by one, and for each one that applies, it lowers the criterion the reason names, or the closest one.
 . It lowers scores for AI-sounding text.
-That covers generic phrasing that could head any talk on the topic, inflated claims without a number or a named system, rule-of-three padding, buzzword lists, no concrete takeaway the attendee can act on, vendor language, and sentences that announce importance instead of showing it.
+That covers generic phrasing that could head any talk on the topic, inflated claims without a number or a named system, rule-of-three padding, buzzword lists, no concrete takeaway the attendee can act on, vendor or product language, and sentences that announce importance instead of showing it.
 . It compares tone and structure with the calibration examples.
 . It checks the reviewer-only relevance field, when the form has one: the field must add what the abstract doesn't have, and a field that restates the abstract costs the relevance criterion.
 . It checks that the audience level matches the content and that the track fits the abstract.
@@ -105,7 +107,7 @@ When both hold, the verdict is `pass`; otherwise it's `revise`.
 The KubeCon + CloudNativeCon profile sets `pass_average` to 4.0 and `pass_min_criterion` to 3.0, and a profile without thresholds gets the same two values.
 
 So an average alone doesn't carry a proposal.
-Scores of 5, 5, 2.5, 4, and 5 average 4.3, but Relevance sits below 3.0, and the verdict is `revise`.
+Scores of 5 for Content, 5 for Originality, 2.5 for Relevance, 4 for Speaker, and 5 for Not a Product Pitch average 4.3, but Relevance sits below 3.0, and the verdict is `revise`.
 
 The skill then shows you the result as a table with one row per criterion, holding the score and the comment.
 Below it come the round number, the verdict, the average against `pass_average`, and the criteria below `pass_min_criterion`, or a note that there are none.
@@ -169,7 +171,7 @@ xref:user/status.adoc[Track a proposal's status] covers the status changes.
 == Run one round on its own
 
 `/cfp:draft` runs the committee review for you, but you can also run a single round on any stored proposal without going through the draft flow.
-Like any skill in Claude Code, you can invoke `cfp:committee-review` directly by typing a slash and its name.
+Like other plugin skills, the `cfp:committee-review` skill runs when you type `/cfp:committee-review`.
 You can also ask in your own words, such as "run the committee review", and Claude loads the skill when it's relevant.
 
 . In Claude Code, run one round on Ada's proposal:
