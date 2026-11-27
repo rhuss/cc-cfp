@@ -3,7 +3,7 @@
 // Sources:
 // cfp:README.md:25,27,38,50-51,65,68,71
 // cfp:cfp/skills/profile/SKILL.md:3,10,19,23,25-27,93,97,99,101-103,105-115,119
-// cfp:cfp/scripts/cfplib/profile.py:361-373
+// cfp:cfp/scripts/cfplib/profile.py:361-373,432-434
 // cfp:cfp/knowledge-base/profiles/kubecon/profile.md:6
 // cfp:cfp/knowledge-base/profiles/kubecon/events/kubecon-eu-2027.md:9
 // cfp:cfp/scripts/cfplib/config.py:117-129,152-158
@@ -132,7 +132,7 @@ With apply, confirm the validated profile when cfp shows it to you.
 `cfp` validates the profile and the event and fixes any problems it finds.
 +
 Check: cfp prints the path of the event file, the approval status of the profile and of the event, and the event as `/cfp:profile show` renders it.
-The event's approval is on.
+If you kept a change for this edition only, cfp wrote the event again, and a rewritten event is unapproved until it is approved again, so the report can show the event as not approved.
 
 xref:profiles/kubecon.adoc[The shipped KubeCon profile] shows which KubeCon limits are confirmed by screenshots and which are still `unverified`.
 
@@ -140,7 +140,7 @@ xref:profiles/kubecon.adoc[The shipped KubeCon profile] shows which KubeCon limi
 
 === Why your store has its own copy
 
-On the first run, `/cfp:init` copies every shipped profile that your store doesn't have yet, marks the copy approved, and keeps the `seed_version` from the shipped `profile.md`.
+When its setup step runs, `/cfp:init` copies every shipped profile that your store doesn't have yet, marks the copy approved, and keeps the `seed_version` from the shipped `profile.md`.
 It never overwrites a profile that's already there.
 
 A later plugin version can ship a newer profile, marked by a higher `seed_version`.
@@ -190,9 +190,11 @@ For an outdated profile, cfp first names both versions, from your copy's `seed_v
 Then it goes through the files the shipped profile has: `profile.md` and the files under `events/` and `examples/`.
 Each file gets one of three states:
 
-`same`:: No difference. `cfp` doesn't mention it.
+`same`:: No difference.
+`cfp` doesn't mention it.
 `changed`:: `cfp` prints the path and then the full diff.
-`missing`:: A shipped file your store doesn't have. `cfp` lists these after the diffs.
+`missing`:: A shipped file your store doesn't have.
+`cfp` lists these after the diffs.
 
 In a diff, lines starting with `-` are in your store now and would be replaced.
 Lines starting with `+` come with the shipped file.
@@ -251,7 +253,7 @@ It takes `profile.md` plus the files you named.
 Check: after an update, cfp reports the files it updated, added, and skipped, validates the profile, and shows the problems when there are any.
 Its closing summary lists the update with the versions.
 
-. Look at the version in your store's copy.
+. After an update, look at the version in your store's copy.
 Replace `~/cfp-store` with your store path.
 +
 Check: the `seed_version` line shows the shipped version, `2026-10-11`.
