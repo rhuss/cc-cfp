@@ -322,7 +322,9 @@ def _cfp_store_warning(store):
 
 
 def cmd_config_init(args):
-    user_profiles_dir = paths.user_profiles_dir()  # fails on an invalid CFP_DATA_DIR before anything is written
+    # Fail on an invalid CFP_DATA_DIR or CFP_CONFIG_DIR before anything is written.
+    user_profiles_dir = paths.user_profiles_dir()
+    paths.config_file()
     store = config.resolve_store(getattr(args, "store", None))
     values = {
         "speaker_name": args.speaker_name,
