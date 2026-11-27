@@ -20,12 +20,21 @@ if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
 
+PATH_ENV_VARS = ("XDG_CONFIG_HOME", "XDG_DATA_HOME", "CFP_CONFIG_DIR", "CFP_DATA_DIR", "CFP_STORE")
+
+
 @pytest.fixture
 def tmp_home(tmp_path, monkeypatch):
-    """Isolated HOME so tests never touch the real ~/.config/cc-cfp."""
+    """Isolated HOME so tests never touch the real config or data folders.
+
+    The XDG and CFP path variables of the developer's environment are removed
+    as well, so they cannot redirect a test to real folders.
+    """
     home = tmp_path / "home"
     home.mkdir()
     monkeypatch.setenv("HOME", str(home))
+    for name in PATH_ENV_VARS:
+        monkeypatch.delenv(name, raising=False)
     return home
 
 
@@ -78,13 +87,17 @@ def run_cli(tmp_store):
     """Invoke cfp_store.py in a subprocess with python3 -I and parse JSON stdout."""
 
     def _run(*args, expect_ok=True, today=TODAY, env=None):
+        """``env`` entries override the environment; a ``None`` value removes the variable."""
         cmd = [sys.executable, "-I", str(CLI)]
         if today:
             cmd += ["--today", today]
         cmd += [str(a) for a in args]
         run_env = dict(os.environ)
-        if env:
-            run_env.update(env)
+        for name, value in (env or {}).items():
+            if value is None:
+                run_env.pop(name, None)
+            else:
+                run_env[name] = str(value)
         completed = subprocess.run(cmd, capture_output=True, text=True, env=run_env)
         result = CliResult(completed)
         if expect_ok:
