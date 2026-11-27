@@ -186,3 +186,14 @@ rules:
       - 'custom'
       - 'pass_average'
       - 'pass_min_criterion'
+  - glob: "content/modules/ROOT/pages/reference/commands.adoc"
+    require:
+      - '/cfp:init'
+      - '/cfp:draft'
+      - '/cfp:bio'
+      - '/cfp:profile'
+      - '/cfp:check'
+      - '/cfp:status'
+      - 'cfp:committee-review'
+      - '--screenshots'
+      - 'reopen'
