@@ -5,3 +5,25 @@ rules:
       - '(?i)openshell'
       - '^// cfp:(specs|brainstorm)/'
       - '(?i)\bcfp (submits|will submit|can submit)\b'
+  - glob: "content/modules/ROOT/pages/index.adoc"
+    require:
+      - 'include::(ROOT:)?partial\$baseline-note\.adoc\[\]'
+      - 'xref:user/index\.adoc'
+      - 'xref:overview/install\.adoc'
+      - 'xref:profiles/index\.adoc'
+      - 'xref:user/draft\.adoc'
+      - 'image::architecture\.svg\['
+      - '\{cfp-version\}'
+      - '^// url:https://code\.claude\.com/docs/en/overview'
+      - '(?i)paste'
+    forbid:
+      - 'cfp_store\.py'
+      - '--from-json'
+      - '(?i)front matter'
+    require_order:
+      - '^== What you get'
+      - '^== The parts'
+      - '^== How they work together'
+      - '^== Ways to start'
+      - '^== Status and limits'
+      - '^== Where to go next'
