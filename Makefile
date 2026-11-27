@@ -53,7 +53,7 @@ clean:
 help:
 	@echo "Available targets:"
 	@echo "  validate     - Validate plugin manifests"
-	@echo "  install      - Install plugin (adds marketplace, installs/updates plugin)"
+	@echo "  install      - Dev only: install the plugin from this checkout (users: cfp@cc-rhuss-marketplace)"
 	@echo "  uninstall    - Remove plugin and marketplace"
 	@echo "  reinstall    - Full uninstall and reinstall"
 	@echo "  test         - Run pytest over cfp/scripts/test (needs ~/.venvs/cc-cfp)"

@@ -6,11 +6,14 @@ The workflow is talk-centric. A talk holds the conference-independent story (pro
 
 ## Install
 
-```bash
-git clone https://github.com/rhuss/cc-cfp.git
-cd cc-cfp
-make install          # adds the local marketplace and installs cfp@cc-cfp-marketplace
+Install the plugin from the [cc-rhuss-marketplace](https://github.com/rhuss/cc-rhuss-marketplace):
+
+```text
+/plugin marketplace add rhuss/cc-rhuss-marketplace
+/plugin install cfp@cc-rhuss-marketplace
 ```
+
+To pick up a new release later, run `/plugin marketplace update cc-rhuss-marketplace` and then `/cfp:init` (see [First run](#first-run)).
 
 Requirements: Claude Code with plugin support and Python 3.10 or newer on `PATH`. The scripts use only the standard library and run with `python3 -I`, so no virtual environment is needed at runtime.
 
@@ -76,7 +79,12 @@ After a passing committee review, the title, abstract, reviewer-only relevance f
 
 ## Development
 
+To work on the plugin itself, install it from your checkout instead of the marketplace. `make install` adds the repository as the local `cc-cfp-marketplace` and installs `cfp@cc-cfp-marketplace` from it; run it again after each change. Uninstall the marketplace copy first (`/plugin uninstall cfp@cc-rhuss-marketplace`) so the two do not load side by side, and use `make uninstall` to remove the development copy again.
+
 ```bash
+git clone https://github.com/rhuss/cc-cfp.git
+cd cc-cfp
+make install       # install the plugin from this checkout (development only)
 uv venv ~/.venvs/cc-cfp
 uv pip install --python ~/.venvs/cc-cfp/bin/python -r cfp/requirements-dev.txt
 make validate      # claude plugin validate on both manifests

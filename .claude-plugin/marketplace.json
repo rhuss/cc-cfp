@@ -4,7 +4,7 @@
     "name": "Roland Huss"
   },
   "metadata": {
-    "description": "Local development marketplace for the cc-cfp plugin. Conference talk proposals and speaker bios with reusable conference profiles."
+    "description": "Local development marketplace for the cc-cfp plugin (used by make install; users install cfp@cc-rhuss-marketplace). Conference talk proposals and speaker bios with reusable conference profiles."
   },
   "plugins": [
     {
