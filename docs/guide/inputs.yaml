@@ -7,7 +7,7 @@ inputs:
     kind: document
     location: ~/Development/context-engineering/cc-cfp/specs/001-cfp-plugin
     role: feature spec, plan, data model, contracts, quickstart, and smoke test of the cfp plugin
-    sha256: "10a4b1f7ce4167cc57763ad31b8176f4072258996df98d26401b7f917377a6d3"
+    sha256: "5be367c96b822b20935bb22044b1b2f8e4d11fa54a71f3d6180828d88144d80f"
     confidential: false
     registered: "2026-11-26"
   - id: brainstorm
@@ -21,7 +21,7 @@ inputs:
     kind: document
     location: ~/Obsidian/ro14nd/09-Talks/profiles/rh-summit
     role: worked example of a second conference profile (Red Hat Summit, RainFocus) researched with /cfp:profile
-    sha256: "6905ce041f0e0086b6af9bee6531c8ef31f30308ee2a5daa17ddc6dc67dcbcca"
+    sha256: "b226194f1803f658283424f51ffeb818c3e55e199ac2e99532c9b4d938a730a0"
     confidential: false
     registered: "2026-11-26"
   - id: kubecon-cfp-eu
