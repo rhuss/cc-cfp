@@ -69,7 +69,7 @@ xref:reference/schema.adoc[Profile and event schema] has the full key list of th
 === config.md
 
 `config.md` holds the speaker settings.
-Its front matter has five keys, with these defaults in the code:
+Its front matter has five keys; Ada Example's file looks like this:
 
 [source,yaml]
 ----
@@ -302,7 +302,7 @@ The body is optional: when the input carries a `description`, cfp writes it as t
 
 == Ids and slugs
 
-The file name is the id plus `.md`, and every id passes one check before cfp builds a path from it.
+The id names the file (`<id>.md`), or for a profile its folder, and every id passes one check before cfp builds a path from it.
 An id starts with a letter or a digit and continues with letters, digits, dots, underscores, or hyphens.
 It may not contain `..`.
 Anything else fails with `invalid <what>: ... (use letters, digits, hyphens)`, where `<what>` names the kind of id, such as `talk id`.
@@ -346,12 +346,13 @@ Text before the first one is a preamble, which cfp keeps when it rewrites the bo
 
 Writes are atomic.
 `cfp` writes a hidden temporary file next to the target and renames it over the target.
-When the target is a symlink, cfp resolves it first, so the real file receives the write, and the new file keeps the permission bits of the old one.
+When the target is a symlink, cfp resolves it first, so the real file receives the write.
+When the target exists, the new file keeps its permission bits.
 
 == Editing by hand
 
 You can edit any store file by hand as long as its front matter stays valid.
-The skills can't: the shared preamble forbids them to edit store files directly, because the CLI preserves unknown keys, recounts characters, and validates transitions.
+The skills must not: the shared preamble forbids them to edit store files directly, because the CLI preserves unknown keys, recounts characters, and validates transitions.
 xref:internals/architecture.adoc[Architecture] explains why exact operations go through the CLI.
 
 A few things are worth knowing before you open a file in your editor:
