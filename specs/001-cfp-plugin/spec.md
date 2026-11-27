@@ -1,5 +1,7 @@
 # Feature Specification: CFP and Bio Plugin for Conference Submissions
 
+> **Historical record.** This specification and the other files in this directory describe the design as of 2026-10-09 and are not kept up to date. The shipped KubeCon profile changed after that date: the abstract limit is 1000, `value_to_community` replaced `benefits`, one `cncf_oss_projects` field replaced the two project fields, and several limits are confirmed by screenshot. For the current behavior read `cfp/knowledge-base/profiles/kubecon/profile.md`, the skills under `cfp/skills/`, and the README.
+
 **Feature Branch**: `001-cfp-plugin`
 
 **Created**: 2026-10-09

@@ -2,6 +2,8 @@
 
 **Feature**: 001-cfp-plugin | **Date**: 2026-10-09
 
+> **Historical record.** The KubeCon field ids, limits, and limit statuses expected below are those of 2026-10-09 and predate the profile that ships today. See the note at the top of [spec.md](spec.md).
+
 This guide proves the feature end to end. Automated checks come first; the interactive scenarios map to the spec's user stories and run in a Claude Code session.
 
 ## Prerequisites

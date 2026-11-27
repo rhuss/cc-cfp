@@ -1,5 +1,7 @@
 # Contract: Store File Schemas
 
+> **Historical record.** The KubeCon examples below show the profile of 2026-10-09 and predate the profile that ships today. See the note at the top of [spec.md](../spec.md).
+
 Every file is UTF-8 markdown. Front matter is delimited by `---` lines at the top. The parser accepts: scalars (string, int, float, bool, ISO date), flat lists, lists of flat maps, and one nested map level. Multi-line strings use `|` block scalars. Unknown keys are preserved on rewrite. A file whose front matter does not parse is reported with path and line and skipped.
 
 Sections in the body are `## <Heading>` lines; scripts locate sections by exact heading text. Text between headings belongs to the preceding heading.

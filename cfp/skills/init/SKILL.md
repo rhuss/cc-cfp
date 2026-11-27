@@ -32,7 +32,9 @@ Ask for the speaker name (required, used in third-person bios and drafts). Then 
 
 ## Step 3: Voice profile
 
-Look for prose plugin voice profiles with Glob: `~/.claude/style/voices/*.yaml` and `.style/voices/*.yaml` in the current project. If any exist, offer the file stems as choices plus "None (humanize only)". If none exist, say that no voice profiles were found, the voice pass will run the humanizer without a voice, and continue with an empty value. The user can also type a name that does not exist yet.
+Look for the named voice profiles of the prose plugin with Glob: `~/.claude/style/voices/*.yaml`, and `~/.claude/prose/voices/*.yaml` for profiles from older cc-prose versions. If any exist, offer the file stems (each name once) as choices plus "None (humanize only)". If none exist, say that no voice profiles were found, the voice pass will run the humanizer without a named voice, and continue with an empty value. The user can also type a name that does not exist yet.
+
+cc-prose also knows one project voice: the file `.style/voice.yaml` (older: `.prose/voice.yaml`) in the directory a session runs in. It has no name, so it is not a choice here. When Glob finds one in the current directory, tell the user that cc-prose applies it before the named profile in every session started in this directory.
 
 ## Step 4: Review rounds
 

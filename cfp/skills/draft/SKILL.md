@@ -219,7 +219,7 @@ Resume detection reads `proposal show` and picks the first step whose data is mi
 
 - No `title` or `abstract` field: Step 5 (after checking `talk complete`, which may send the flow back to Step 4).
 - A required field from `profile show` is missing, or `bio` is empty while `bio_on_form` is true: Step 6 for the missing parts only.
-- `review_rounds` is empty, `review_stale` is true (the text was edited after the last review), or the last verdict is `revise` and the round count is below `review_rounds` from the config: Step 7.
+- `review_rounds` is empty, `review_stale` is true (the proposal was `ready` and was then edited or moved back to `draft`, so the last review no longer covers its text; edits to a draft, such as the voice pass and shortening, do not set it), or the last verdict is `revise` and the round count is below `review_rounds` from the config: Step 7.
 - Last verdict `pass` and `voice_pass` false: Step 8.
 - `count` reports entries in `over`: Step 9.
 - `preflight` is empty or its `date` is older than the proposal's `updated`: Step 10.

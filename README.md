@@ -46,7 +46,7 @@ Everything is plain markdown with YAML front matter and renders in Obsidian.
 
 ```text
 <store>/
-  config.md                      speaker name, company, voice profile, review rounds
+  config.md                      speaker name, company, voice profile, review rounds, default profile
   profiles/<family>/profile.md   session types, form fields with limits, rubric, rules, rejection reasons
   profiles/<family>/events/*.md  per-edition overrides: dates, tracks, submission limit, session type variations
   profiles/<family>/examples/*.md calibration examples (accepted texts, official samples)
@@ -57,6 +57,8 @@ Everything is plain markdown with YAML front matter and renders in Obsidian.
 ```
 
 Files can be edited by hand as long as the front matter stays valid. A file with broken front matter is reported with its path and the problem, and the rest of the store keeps working.
+
+The front matter of `config.md` has these keys: `speaker_name`, `speaker_company`, `voice_profile`, `review_rounds` (default 3), and `default_profile`. `default_profile` is the profile `/cfp:draft` offers first; `/cfp:init` sets it to the first profile in the store when it is empty. One more key is optional and `/cfp:init` does not ask for it: `speaker_gender`. Add it by hand when a profile has a rule about speaker line-ups in which every speaker is a man (KubeCon has one for sessions with three or more speakers). Without it, the pre-flight check warns that it could not confirm the rule.
 
 ## Confirming the KubeCon limits
 
@@ -70,7 +72,7 @@ Limits confirmed by a screenshot become `limit_status: screenshot` with the file
 
 ## Voice pass
 
-After a passing committee review, the title, abstract, reviewer-only relevance field, and bio snapshot are run through `prose:humanizer` from the [cc-prose](https://github.com/rhuss/cc-prose) plugin with the voice profile from `config.md`. Voice profiles are the YAML files under `~/.claude/style/voices/` (or `.style/voices/` in a project). The pass changes only the proposal's bio snapshot, never the stored bio variation, and the character counts are rechecked afterwards.
+After a passing committee review, the title, abstract, reviewer-only relevance field, and bio snapshot are run through `prose:humanizer` from the [cc-prose](https://github.com/rhuss/cc-prose) plugin with the voice profile from `config.md`. Voice profiles are the named YAML files under `~/.claude/style/voices/`. cc-prose also reads one project voice from `.style/voice.yaml` in the directory a session runs in, and applies it before the named profile. The pass changes only the proposal's bio snapshot, never the stored bio variation, and the character counts are rechecked afterwards.
 
 ## Development
 
