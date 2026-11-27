@@ -138,4 +138,5 @@ def list_profile_ids(store):
     directory = Path(store) / "profiles"
     if not directory.is_dir():
         return []
-    return sorted(p.name for p in directory.iterdir() if (p / "profile.md").is_file())
+    # Hidden folders (for example a ``.<id>.seeding`` left by a killed init) are not profiles.
+    return sorted(p.name for p in directory.iterdir() if not p.name.startswith(".") and (p / "profile.md").is_file())

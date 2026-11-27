@@ -161,6 +161,25 @@ def test_store_path_is_xml_escaped(tmp_path):
     assert unescape(raw) == str(store.resolve())
 
 
+@pytest.mark.skipif(hasattr(os, "geteuid") and os.geteuid() == 0, reason="root ignores folder permissions")
+def test_unreadable_store_yields_store_error(tmp_path):
+    home = tmp_path / "home"
+    home.mkdir()
+    locked = tmp_path / "locked"
+    store = locked / "store"
+    store.mkdir(parents=True)
+    (store / "config.md").write_text("---\n---\n", encoding="utf-8")
+    locked.chmod(0)
+    try:
+        context = context_of(run_hook(clean_env(home, CFP_STORE=store)))
+    finally:
+        locked.chmod(0o755)
+    assert element(context, "store") == ""
+    assert element(context, "store-initialized") == "false"
+    error = element(context, "store-error")
+    assert error.startswith(f"cannot read {store / 'config.md'}:") and "ermission" in error
+
+
 def test_store_error_is_xml_escaped(tmp_path):
     home = tmp_path / "home"
     home.mkdir()

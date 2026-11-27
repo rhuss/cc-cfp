@@ -134,7 +134,7 @@ Creates the store folder with missing parents, its subfolders and `config.md`, a
 Without a default profile, it takes the first profile id in sort order.
 It also writes the store path to `config.json` in the config folder, named in `config_write_path`.
 `warnings` lists personal profiles that replace shipped ones, personal profile folders skipped because of an invalid name or an unreadable `profile.md`, and, when `CFP_STORE` names another store or is invalid, what that means for later sessions.
-A personal profile is copied as regular files; symlinked event or example files in it are skipped.
+A personal profile is copied as regular files; symlinked `events/` or `examples/` folders and symlinked files in them are skipped.
 Fails on an invalid `CFP_DATA_DIR` or `CFP_CONFIG_DIR` before it writes anything.
 
 |`set`
@@ -187,7 +187,7 @@ a|* `--seed-dir <path>`, required: the shipped profiles
 * `--user-seed-dir <path>`: overrides the personal profiles folder (for tests)
 |`seeds`: one entry per seed profile, shipped or personal, with `profile`, `state`, `store_version`, `seed_version`, `files`, `source` (`plugin` or `user`), and `seed_dir` (the folder it was read from).
 States: `missing`, `current`, `outdated`, `newer`, `local`, `unreadable`.
-For an `outdated` profile, `files` lists each seed file as `same`, `changed` (with a `diff`), or `missing`.
+For an `outdated` profile, `files` lists each seed file as `same`, `changed` (with a `diff`), `missing`, or `unreadable` (with an `error`; `seed-update` refuses to take such a file).
 The diff of a personal profile labels its side `user/<file>`, the diff of a shipped one `shipped/<file>`.
 `warnings`: one entry per personal profile that replaces a shipped one of the same name.
 Fails on an invalid `CFP_DATA_DIR`.

@@ -14,6 +14,7 @@ import shutil
 from pathlib import Path
 
 from cfplib import CfpError, frontmatter, paths, seeds
+from cfplib import store as store_module
 
 STORE_DIRS = ("profiles", "talks", "proposals", "bios", "resources")
 DEFAULT_STORE_CONFIG = {
@@ -186,7 +187,7 @@ def init_store(store, values, seed_dir=None, user_seed_dir=None):
 
     current = load_store_config(store)
     if not current.get("default_profile"):
-        profiles = sorted(p.name for p in (store / "profiles").iterdir() if (p / "profile.md").is_file())
+        profiles = store_module.list_profile_ids(store)
         if profiles:
             write_store_config(store, {"default_profile": profiles[0]})
 

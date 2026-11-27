@@ -121,7 +121,7 @@ A missing folder is an empty source; cfp never creates it.
 * A personal profile with the name of a shipped one replaces it, and each of these commands returns a warning that names both folders.
 * A folder whose name is not a valid profile id (letters, digits, `.`, `_`, `-`, starting with a letter or digit) is skipped with a warning.
 * `config init` skips a personal profile whose `profile.md` can't be read and returns a warning that names the file; `profile seed-status` reports it as `unreadable`.
-* The store copy is made of regular files: a symlinked `profile.md` or profile folder is copied by content, and symlinked event or example files are skipped.
+* The store copy is made of regular files: a symlinked `profile.md` or profile folder is copied by content, and symlinked `events/` or `examples/` folders and symlinked files in them are skipped.
 * `seed_version` is an ISO date (`YYYY-MM-DD`), compared as text.
 * A profile without `seed_version` is copied once; its store copy counts as `local` and is never offered an update.
 * A variant of a shipped profile replaces an existing store copy of the shipped profile only when its `seed_version` is later than the copy's.

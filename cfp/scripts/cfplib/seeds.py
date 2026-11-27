@@ -130,7 +130,11 @@ def _file_states(seed_profile_dir, target_dir, source="plugin"):
         if not target.is_file():
             files.append({"path": rel, "state": "missing"})
             continue
-        seed_text = _canonical(seed_profile_dir / rel)
+        try:
+            seed_text = _canonical(seed_profile_dir / rel)
+        except CfpError as error:
+            files.append({"path": rel, "state": "unreadable", "error": str(error)})
+            continue
         try:
             store_text = _canonical(target)
         except CfpError as error:
@@ -253,6 +257,12 @@ def update(store_path, seed_dir, profile_id, files=None, all_files=False, user_d
 
     target_dir = store.profile_dir(store_path, profile_id)
     writes = [PROFILE_FILE] + [path for path in open_files if path in chosen]
+    broken = [path for path in writes if states.get(path) == "unreadable"]
+    if broken:
+        raise CfpError(
+            f"seed files of profile '{profile_id}' cannot be read: {', '.join(broken)}; "
+            "fix them or leave them out of the update"
+        )
     linked = [
         str(path)
         for path in [target_dir] + [target_dir / sub for sub in SEED_SUBDIRS] + [target_dir / rel for rel in writes]

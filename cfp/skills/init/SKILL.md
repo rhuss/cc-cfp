@@ -85,7 +85,7 @@ The result has `seeds` and `warnings`. Show each entry of `warnings` that Step 5
 For an outdated profile:
 
 1. Say which seed is newer than the copy in the store, with both versions (`store_version` to `seed_version`): "the shipped `<profile>` profile" for `source: plugin`, "your personal `<profile>` profile in `<seed_dir>`" for `source: user`.
-2. For every entry in `files` with the state `changed`, print its path and then its `diff` in full in a fenced `diff` block. Explain once how to read it: lines starting with `-` are in the store now and would be replaced, lines starting with `+` come with the seed file (labeled `shipped/` or `user/`). Then list the files with the state `missing` (seed files, shipped or personal, that the store does not have). Files with the state `same` need nothing.
+2. For every entry in `files` with the state `changed`, print its path and then its `diff` in full in a fenced `diff` block. Explain once how to read it: lines starting with `-` are in the store now and would be replaced, lines starting with `+` come with the seed file (labeled `shipped/` or `user/`). Then list the files with the state `missing` (seed files, shipped or personal, that the store does not have). Files with the state `same` need nothing. Files with the state `unreadable` cannot be taken: show their `error` and leave them out of the `--files` choice.
 3. Ask (AskUserQuestion) what to do:
    - `update everything shown`: offer it only when a file other than `profile.md` is changed or missing.
    - `update the profile only`: `profile.md` is replaced, the other files stay as they are.

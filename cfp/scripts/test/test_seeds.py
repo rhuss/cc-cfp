@@ -314,6 +314,30 @@ def test_update_refuses_to_write_through_a_symlinked_store_copy(seeded_store, tm
     assert outside.read_bytes() == before
 
 
+def test_unreadable_seed_event_is_reported_and_refused(seeded_store, tmp_path):
+    user_dir = tmp_path / "profiles"
+    seed = user_seed(user_dir, "kubecon")
+    (seed / EU).write_bytes(b"\xff\xfe not utf-8")
+    listing = seeds.status(seeded_store, SEED_DIR, user_dir)
+    info = kubecon(listing)
+    assert info["state"] == "outdated"
+    files = {f["path"]: f for f in info["files"]}
+    assert files[EU]["state"] == "unreadable" and str(seed / EU) in files[EU]["error"]
+    before = (seeded_store / "profiles" / "kubecon" / "profile.md").read_bytes()
+    with pytest.raises(CfpError, match="cannot be read: events/kubecon-eu-2027.md"):
+        seeds.update(seeded_store, SEED_DIR, "kubecon", all_files=True, user_dir=user_dir)
+    assert (seeded_store / "profiles" / "kubecon" / "profile.md").read_bytes() == before
+    result = seeds.update(seeded_store, SEED_DIR, "kubecon", user_dir=user_dir)
+    assert result["updated"] == ["profile.md"]
+
+
+def test_hidden_staging_folder_is_not_a_profile(seeded_store):
+    leftover = seeded_store / "profiles" / ".aaa.seeding"
+    leftover.mkdir()
+    (leftover / "profile.md").write_text("---\nid: aaa\n---\n", encoding="utf-8")
+    assert store.list_profile_ids(seeded_store) == ["kubecon"]
+
+
 def test_collect_skips_user_folder_with_unsafe_name(tmp_path):
     user_dir = tmp_path / "profiles"
     user_seed(user_dir, "acme-summit")

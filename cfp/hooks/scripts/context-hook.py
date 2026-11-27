@@ -18,6 +18,8 @@ reported as not initialized, and ``<store-error>`` carries the message.
 
 import datetime
 import json
+import os
+import stat
 import sys
 from pathlib import Path
 from xml.sax.saxutils import escape
@@ -54,12 +56,17 @@ def main():
         return 0
 
     store, error = resolve_store()
-    try:
-        initialized = bool(store) and (Path(store) / "config.md").is_file()
-    except OSError as os_error:  # for example a store in a folder the process may not read
-        initialized = False
-        error = f"cannot read {Path(store) / 'config.md'}: {os_error.strerror or os_error}"
-        store = ""  # as for a resolution error: <store> is empty whenever <store-error> is present
+    initialized = False
+    if store:
+        config_md = Path(store) / "config.md"
+        # os.stat, not Path.is_file: since Python 3.14 is_file() hides a PermissionError as False.
+        try:
+            initialized = stat.S_ISREG(os.stat(config_md).st_mode)
+        except (FileNotFoundError, NotADirectoryError):
+            pass
+        except OSError as os_error:  # for example a store in a folder the process may not read
+            error = f"cannot read {config_md}: {os_error.strerror or os_error}"
+            store = ""  # as for a resolution error: <store> is empty whenever <store-error> is present
     today = datetime.date.today().isoformat()
 
     lines = [
