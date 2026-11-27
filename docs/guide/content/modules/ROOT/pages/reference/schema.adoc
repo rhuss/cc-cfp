@@ -12,7 +12,7 @@
 // cfp:cfp/scripts/cfplib/config.py:124-129
 // cfp:cfp/scripts/cfplib/lifecycle.py:77-87,95-116
 // cfp:cfp/scripts/cfplib/store.py:67-80
-// cfp:cfp/scripts/cfp_store.py:328-330
+// cfp:cfp/scripts/cfp_store.py:113-115,123,328-330
 // cfp:cfp/knowledge-base/templates/profile.md:1-53
 // cfp:cfp/knowledge-base/templates/event.md:1-20
 // cfp:cfp/knowledge-base/templates/example.md:1-17
@@ -237,7 +237,7 @@ An event override patches the entry with this id.
 
 |`kind`
 |<<field-kind,field kind>>
-|none
+|none (`profile validate` reports it); the paste view and the review packet read it as `text`
 |yes
 |`proposal set-field` and the drafting steps per kind.
 
@@ -246,7 +246,7 @@ An event override patches the entry with this id.
 |empty (no limit)
 |yes
 |The character count.
-The merged form coerces it: a value that is not a positive integer counts as no limit.
+The merged form coerces it: a whole number, also one written as a string such as `"75"`, counts as that number; any other value counts as no limit.
 
 |`limit_status`
 |<<limit-status,limit status>>
@@ -336,7 +336,7 @@ Candidates for the <<relevance-field,relevance field>>.
 |Status |Meaning
 
 |`page`
-|From a fetched public page, with its URL in `source`.
+|From a page, with its URL in `source`.
 
 |`screenshot`
 |From a screenshot of the form, with `screenshot:<file>` in `source`.
@@ -495,7 +495,7 @@ Text in `note_field` lowers the finding to `warn`.
 |Not computed; left to the committee review.
 
 |`custom`
-|`session_type` (read by the judging procedure only)
+|`session_type`, and any numbers the `text` refers to (read by the judging procedure only)
 |Not computed; the pre-flight procedure judges `text` against the proposal.
 |===
 
@@ -606,7 +606,7 @@ In the `event write` JSON it goes into a `body` mapping or the key `notes`.
 
 * An override without an `id` is skipped.
 * An override whose `id` matches an entry updates only the keys it sets.
-* An override with an unknown `id` is added as a new entry.
+* An override with an unknown `id` is added as a new entry, unless it has `remove: true`.
 * A session type override with `remove: true` removes the entry.
 Field overrides cannot remove a field.
 * When the event lists `tracks`, they become the `options` of the `track` field.
@@ -615,6 +615,8 @@ Field overrides cannot remove a field.
 * `rubric`, `rules`, `rejection_reasons`, the bio keys, and `## Drafting guidance` come from the profile only.
 
 == Calibration example
+
+Default is what `example add` writes when its JSON leaves the key out.
 
 [cols="2,2,2,5"]
 |===
