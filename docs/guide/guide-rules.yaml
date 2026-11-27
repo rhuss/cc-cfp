@@ -84,3 +84,10 @@ rules:
       - '(?i)paste'
       - '/cfp:status set'
       - 'xref:user/status\.adoc'
+  - glob: "content/modules/ROOT/pages/user/bios.adoc"
+    require:
+      - '/cfp:bio'
+      - 'resource add'
+      - '(?i)snapshot'
+      - '(?i)third person'
+      - '(?i)recording'

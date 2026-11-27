@@ -1,5 +1,206 @@
 = Bios and speaker resources
-:guide-no-sources:
 
-// STUB
-This page is written by a later task of the guide plan.
+// Sources:
+// cfp:cfp/commands/bio.md:1-6
+// cfp:cfp/skills/bio/SKILL.md:3,10,12-26,30-39,41-62,64-72,74-76,78-105
+// cfp:cfp/scripts/cfplib/bios.py:5,21-39,63-68,85-122,141-146
+// cfp:cfp/scripts/cfplib/profile.py:36-38,254-256
+// cfp:cfp/scripts/cfplib/store.py:13-27,59-64
+// cfp:cfp/scripts/cfplib/config.py:132-133,162-166
+// cfp:cfp/knowledge-base/profiles/kubecon/profile.md:3,213-214
+// cfp:cfp/knowledge-base/templates/bio.md:1-9
+// cfp:cfp/knowledge-base/templates/resource.md:1-8
+// cfp:cfp/scripts/cfplib/proposals.py:295-303,305-311,352-363
+// cfp:cfp/skills/draft/SKILL.md:118,121-127
+// prose:prose/.claude-plugin/plugin.json:2
+// prose:prose/skills/humanizer/SKILL.md:2-5
+
+When a conference form has a speaker bio or a resources field, `/cfp:draft` fills it from your store.
+`cfp` keeps your bio variations and your speaker resources there, so you write a bio or add a recording once and pick it in every draft that needs it.
+
+This page shows how to manage both with `/cfp:bio`.
+The terms bio variation, bio snapshot, speaker resource, and voice pass are explained in xref:user/index.adoc[Using cfp].
+
+== The /cfp:bio command
+
+`/cfp:bio` hands its arguments to the `cfp:bio` skill, which runs one subaction:
+
+[cols="2,3"]
+|===
+|Arguments |What happens
+
+|none or `list`
+|Lists your bios and resources.
+
+|`new`
+|Creates a bio variation.
+
+|`edit <name>`
+|Edits a bio variation.
+
+|`delete <name>`
+|Deletes a bio variation.
+
+|`resource add`
+|Adds a speaker resource.
+
+|`resource list`
+|Lists your resources.
+
+|`resource delete <id>`
+|Deletes a resource.
+|===
+
+Type anything else and cfp shows this table and asks which subaction you want.
+
+== Write a bio variation
+
+Each bio variation has a name, an emphasis, and a target length.
+That lets you keep a short cloud native bio next to a longer one about your AI work, and `/cfp:draft` asks which one to use.
+
+. In Claude Code, start a new variation:
++
+[source]
+----
+/cfp:bio new
+----
++
+`cfp` reads your name, your company, your voice profile, and your default profile from your store configuration.
+You set the first three with xref:overview/install.adoc[`/cfp:init`].
+When no default profile is set, `/cfp:init` makes the first profile in your store, in alphabetical order, the default.
+
+. Pick the emphasis: `cloud-native`, `ai`, `general`, or `other`.
+With `other` you type your own, and cfp reduces it to a single lowercase word before it stores the bio.
+
+. Settle the target length in characters.
+`cfp` suggests the bio limit of your default profile and tells you in one sentence which conference it belongs to and how sure that limit is:
++
+* "confirmed on the form" for a limit with the status `screenshot`;
+* "stated on the CFP page" for `page`;
+* "unverified, the live form may differ" for `unverified`.
++
+With the KubeCon + CloudNativeCon profile as your default, that's 500 characters, confirmed on the form.
+When there's no default profile, the form has no bio, or the profile names no bio limit, cfp suggests 500 as a common length and says that it isn't tied to a conference.
+You can answer with any positive number.
+Other profiles can have other limits, and `/cfp:draft` shows every bio against the limit of the proposal's own profile.
+
+. Say whether you have source material: paste text into your next message, give a file path, start from an existing bio, or choose none.
+
+. Read the draft.
+`cfp` writes it in the third person with your name in the first sentence, your current role and company when it knows them, and one or two concrete things you've built or maintain.
+Speaking and community work go in when your material supports them.
+The draft has no superlatives and no lists, and it aims a little under the target so that the voice pass doesn't push it over.
+
+. Let the voice pass run.
+When the `prose:humanizer` skill from cc-prose is available, cfp runs it on the draft, with your voice profile when you've set one.
+Without it, cfp says "prose plugin not installed, skipping the voice pass" and keeps the draft.
+xref:user/review.adoc[Committee review and voice pass] covers the voice pass and voice profiles in more depth.
+
+. Decide what to do with it.
+`cfp` prints the complete bio, followed by its count as `<chars>/<target> chars`, and says by how much it's over when it is.
+Then you choose `save`, `change something`, `regenerate`, or `cancel`, and the loop repeats until you save or cancel.
+
+. Name the variation.
+`cfp` proposes a name built from length and emphasis: `short` when the target is at most 600 characters, `long` otherwise.
+Ada Example picks `cloud-native` and keeps the 500 characters, so cfp proposes `short-cloud-native`.
+You can accept it or type your own name with lowercase letters, digits, and hyphens.
+When the name is already taken, cfp asks whether to overwrite that bio or pick another name.
++
+Check: cfp reports the path of the stored bio, `bios/short-cloud-native.md` in your store for Ada, with its count as `<chars>/<target>`, and mentions `/cfp:bio list` and that you can pick the bio during `/cfp:draft`.
+
+The stored file has front matter with the name, the emphasis, the target length, the date of the last update, and the character count, followed by the bio text.
+
+== List, edit, and delete bios
+
+`/cfp:bio list` (or `/cfp:bio` alone) shows your bios as a table with the columns Name, Emphasis, Chars, Target, and Updated.
+When a bio has a target, the Chars column shows the count against it.
+Below the table there's one line per resource type with its count, for example "Resources: 2 recordings, 1 repository".
+With no bios yet, cfp says so and points you to `/cfp:bio new`.
+
+`/cfp:bio edit <name>` shows the current text with its count against the target and asks what should change.
+Typical answers are "shorten to 400 characters", "add a project", "change the emphasis", or "update the role".
+`cfp` redrafts with that change, keeps everything else, runs the voice pass as in `new`, and goes through the same save loop.
+The emphasis and the target length stay as they are unless you changed them.
+
+`/cfp:bio delete <name>` shows the first 100 characters of the bio and asks "Delete bio `<name>`?" before it removes the file.
+
+== Why a proposal keeps its own snapshot
+
+When you pick a bio variation for a proposal in `/cfp:draft`, cfp copies the variation's text into the proposal and records the variation's name.
+That copy is the proposal's bio snapshot.
+When the chosen bio is over the form's limit and you shorten it during the draft, only the snapshot changes, and the stored variation stays untouched.
+Deleting a variation doesn't change stored proposals either, because each one keeps its own snapshot.
+
+== Speaker resources
+
+A speaker resource is a titled link with one of six types:
+
+* `recording`: a talk recording
+* `repository`: a repository
+* `blog`: a blog post
+* `session`: a prior session
+* `publication`: a publication
+* `other`: anything else
+
+=== Add a resource
+
+When `/cfp:draft` reaches a form's resources field, it offers the resources you add here.
+
+. Start the subaction:
++
+[source]
+----
+/cfp:bio resource add
+----
+
+. Pick the type.
+`cfp` explains in one line that recordings count most for the Speaker criterion.
+
+. Give the title and the link.
+Both are required, and cfp refuses a resource without them.
+
+. Add a date as `YYYY-MM-DD`, or answer "skip".
+
+. Add a one-line note, or leave it empty.
+The note is a good place for the event or the talk that a recording belongs to.
++
+Check: cfp reports the resource's id and the path of its file.
+The id comes from the title.
+Ada's recording "Draining nodes without dropping requests" gets the id `draining-nodes-without-dropping-requests` and the file `resources/draining-nodes-without-dropping-requests.md` in her store.
+When that id is already taken, cfp adds `-2`, `-3`, and so on.
+
+. Answer the recording question.
+When your store still has no recording, cfp recommends adding one and asks whether to do it now.
+Say yes and it starts again at the title, with the type set to `recording`.
+
+The stored file has front matter with the id, the type, the title, the link, the date, and the notes.
+
+=== List and delete resources
+
+`/cfp:bio resource list` shows a table with the columns Id, Type, Title, Link, and Date, with recordings first.
+Name a type to see only that type.
+When the list is empty, cfp points you to `/cfp:bio resource add`.
+
+`/cfp:bio resource delete <id>` shows the resource's type, title, and link and asks "Delete resource `<id>`?" before it removes the file.
+Proposals that reference the id keep the reference.
+
+== Why recordings matter
+
+Reviewers score the Speaker criterion higher when a talk recording is linked.
+The drafting instructions of `/cfp:draft` go one step further: the Speaker criterion reaches its top level only with a recording.
+That's why cfp puts recordings first.
+It lists them first in `/cfp:bio resource list`, recommends adding one after `/cfp:bio resource add` when your store has none, and offers them first in a form's resources field.
+xref:user/review.adoc#recordings[Recordings and the Speaker criterion] shows how the simulated reviewer applies this.
+
+== How /cfp:draft uses bios and resources
+
+For a form field with the id `resources`, `/cfp:draft` lists your speaker resources, offers recordings first, and recommends one.
+The proposal stores the ids you pick, and when the form has that field, cfp writes one `Title: link` line per resource into it.
+When you have no recording, cfp says so and suggests `/cfp:bio resource add` for later.
+
+For the bio, `/cfp:draft` first checks whether the form has one.
+When it doesn't, cfp says so in one line and attaches none.
+Otherwise it lists your variations with their counts against the form's bio limit, shows the complete text of the one you choose, and asks whether to attach it, shorten it, or pick another.
+With no bios in your store, it offers to write one with you, the same way `/cfp:bio new` does, and then continues the draft.
+
+xref:user/draft.adoc[Draft a proposal] walks through both parts in the full drafting flow.
