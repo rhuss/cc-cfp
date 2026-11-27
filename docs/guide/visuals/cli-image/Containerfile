@@ -1,0 +1,5 @@
+# cfp CLI image for the guide's captured visuals. No published image contains the cfp
+# CLI, so it is built from the pinned source: make visuals-image builds it with the
+# build context .guide/cache/cfp (the cfp source at the baseline commit).
+FROM docker.io/library/python:3.12-slim
+COPY cfp /opt/cfp

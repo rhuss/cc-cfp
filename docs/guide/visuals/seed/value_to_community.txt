@@ -1,0 +1,1 @@
+Every cluster operator drains nodes, and managed platforms now upgrade nodes on a fixed schedule, so the window for manual babysitting is gone. Platform teams and application owners both benefit: the talk gives them a shared checklist for budgets and probes that works on any conformant cluster.

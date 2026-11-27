@@ -1,0 +1,11 @@
+{
+  "id": "safe-node-drains",
+  "title": "Drain Nodes Without Dropping Requests",
+  "sections": {
+    "Problem": "Node drains during cluster upgrades drop requests even when every workload has a PodDisruptionBudget.",
+    "Contribution": "A walkthrough of one drain from cordon to the last eviction, with the budget, probe, and preStop settings that keep traffic flowing.",
+    "Takeaways": "Size budgets for real replica counts, pair them with readiness probes and preStop hooks, and test a drain before the next upgrade.",
+    "What is new": "Managed platforms now upgrade nodes on a fixed schedule, so drains happen without an operator watching.",
+    "Story notes": "Fictional example talk for the cfp guide."
+  }
+}
