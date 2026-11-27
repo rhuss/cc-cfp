@@ -89,7 +89,9 @@ Use snake_case ids so the drafting skill can recognize the same field across con
 - `case_study`: boolean, is this an end-user case study
 - `previously_presented`: boolean or text about prior outings of the talk
 - `cncf_oss_projects`: CNCF projects featured plus all other open source projects discussed, with links (older forms split this into `cncf_projects` and `open_source_projects`)
-- `resources`: additional resources such as prior recordings (kind `resources`)
+- `resources`: additional resources such as prior recordings. Use kind `resources` when the form takes a list of links and `longtext` when it has one free-text box; the draft flow fills the field from the stored speaker resources either way
 - `bio`: speaker biography, when the form asks for it per submission
 
 Fields that match none of these get a descriptive snake_case id of their own (for example `learning_outcomes`, `prerequisites`).
+
+The draft flow treats exactly one field as the reviewer-only relevance field and writes it with the benefits guidance: `benefits` when the form has a field with that id, otherwise the first field in form order with `audience: reviewer` and `kind: longtext`, not counting `previously_presented` and `resources`. `profile show` reports its id as `relevance_field` (null when the form has none). Every other reviewer-only text field is drafted from its own `guidance`, so give those fields a `guidance` text that says what the form expects.

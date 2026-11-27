@@ -74,16 +74,6 @@ def count_submissions(store_path, event_id, exclude_proposal=None):
     return len(counted), problems
 
 
-def _relevance_field_id(eff):
-    fields = eff.get("fields", [])
-    if any(f.get("id") == "benefits" for f in fields):
-        return "benefits"
-    for field in fields:
-        if field.get("audience") == "reviewer" and field.get("kind") == "longtext":
-            return field["id"]
-    return None
-
-
 def _event_year(store_path, meta, fallback_date):
     try:
         event = profile.load_event(store_path, meta.get("profile"), meta.get("event"))
@@ -104,7 +94,7 @@ def _add_accepted_example(store_path, meta, body, date):
     benefits = ""
     try:
         eff = profile.load_effective(store_path, meta.get("profile"), meta.get("event"))
-        relevance_id = _relevance_field_id(eff)
+        relevance_id = eff.get("relevance_field")
         if relevance_id:
             benefits = sections.get(f"Field: {relevance_id}", "")
     except CfpError:

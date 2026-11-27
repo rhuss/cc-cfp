@@ -38,6 +38,36 @@ def test_effective_merge_with_seed_event(seeded_store):
     assert "Seeded from" in eff["notes"]
 
 
+def test_relevance_field_id_rules():
+    def field(field_id, audience="reviewer", kind="longtext"):
+        return {"id": field_id, "audience": audience, "kind": kind}
+
+    kubecon_like = [
+        field("title", "public", "text"), field("abstract", "public"), field("value_to_community"),
+        field("previously_presented"), field("resources"),
+    ]
+    assert profile.relevance_field_id(kubecon_like) == "value_to_community"
+    # an older form's benefits field wins wherever it sits
+    assert profile.relevance_field_id([field("notes"), field("benefits")]) == "benefits"
+    # fields with their own drafting rule are never the relevance field
+    assert profile.relevance_field_id([field("previously_presented"), field("resources"), field("why_this_talk")]) == "why_this_talk"
+    assert profile.relevance_field_id([field("resources", kind="resources"), field("previously_presented")]) is None
+    # public fields and short text fields do not qualify
+    assert profile.relevance_field_id([field("abstract", "public"), field("notes", kind="text")]) is None
+    assert profile.relevance_field_id([]) is None
+    assert profile.relevance_field_id(None) is None
+
+
+def test_effective_names_the_relevance_field(seeded_store):
+    eff = profile.load_effective(seeded_store, "kubecon", "kubecon-eu-2027")
+    assert eff["relevance_field"] == "value_to_community"
+    # an event override that adds an older benefits field changes the answer for that edition only
+    prof = profile.load_profile(seeded_store, "kubecon")
+    event = {"id": "x", "field_overrides": [{"id": "benefits", "label": "Benefits", "kind": "longtext", "audience": "reviewer"}]}
+    assert profile.effective(prof, event)["relevance_field"] == "benefits"
+    assert profile.effective(prof, None)["relevance_field"] == "value_to_community"
+
+
 def test_effective_without_event(seeded_store):
     prof = profile.load_profile(seeded_store, "kubecon")
     eff = profile.effective(prof, None)

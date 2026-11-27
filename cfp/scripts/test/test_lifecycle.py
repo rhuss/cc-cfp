@@ -171,6 +171,24 @@ def test_accepted_creates_calibration_example(seeded_store):
     assert own[0]["event"] == "kubecon-eu-2027" and own[0]["year"] == 2027
 
 
+def test_accepted_example_takes_the_relevance_field_not_another_reviewer_text(seeded_store):
+    # previously_presented is reviewer-only longtext too; when it comes first on a form
+    # it must not be captured as the example's relevance text
+    path = store.profile_path(seeded_store, "kubecon")
+    meta, body = frontmatter.load(path)
+    by_id = {f["id"]: f for f in meta["fields"]}
+    order = ["title", "abstract", "previously_presented", "value_to_community"]
+    meta["fields"] = [by_id[i] for i in order] + [f for f in meta["fields"] if f["id"] not in order]
+    frontmatter.save(path, meta, body)
+    make_talk(seeded_store)
+    fields = {"title": "A Title", "abstract": "An abstract.", "previously_presented": "Not presented before.", "value_to_community": "Why it matters."}
+    pid = make_proposal(seeded_store, status="submitted", fields=fields)
+    lifecycle.set_status(seeded_store, pid, "accepted", date="2026-12-07", today=TODAY)
+    examples, _ = profile.list_examples(seeded_store, "kubecon")
+    own = [e for e in examples if e["origin"] == "own-accepted"]
+    assert own[0]["benefits"] == "Why it matters."
+
+
 def test_presented_records_outing_on_talk(seeded_store):
     make_talk(seeded_store)
     pid = make_proposal(seeded_store, status="accepted")

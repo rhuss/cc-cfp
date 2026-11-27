@@ -26,6 +26,7 @@ def packet(store_path, proposal_id, examples=3):
             {
                 "id": field_id,
                 "label": field.get("label", field_id),
+                "kind": field.get("kind", "text"),
                 "audience": field.get("audience", "public"),
                 "required": bool(field.get("required", False)),
                 "text": texts.get(field_id, ""),
@@ -76,6 +77,7 @@ def packet(store_path, proposal_id, examples=3):
             "audience_level": meta.get("audience_level"),
             "angle": meta.get("angle"),
             "fields": fields,
+            "relevance_field": eff.get("relevance_field"),
             "bio": proposals.bio_text(body),
             "resources": resources,
             "co_speakers": meta.get("co_speakers") or [],

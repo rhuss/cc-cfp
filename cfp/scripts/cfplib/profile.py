@@ -55,6 +55,30 @@ EVENT_DEFAULTS = {
     "field_overrides": [],
 }
 PROFILE_SECTIONS = ("Drafting guidance", "Notes")
+# Reviewer-only longtext fields with their own drafting rule; never the relevance field.
+RELEVANCE_EXCLUDED_IDS = ("previously_presented", "resources")
+
+
+def relevance_field_id(fields):
+    """Id of the reviewer-only relevance field (why the talk belongs on the schedule), or None.
+
+    An older form's ``benefits`` field wins when the form has one. Otherwise it
+    is the first field in form order with ``audience: reviewer`` and
+    ``kind: longtext`` whose id has no drafting rule of its own
+    (``previously_presented``, ``resources``). The draft skill, the committee
+    review packet, and the accepted-example capture all use this one answer.
+    """
+    fields = [field for field in (fields or []) if isinstance(field, dict)]
+    if any(field.get("id") == "benefits" for field in fields):
+        return "benefits"
+    for field in fields:
+        if (
+            field.get("audience") == "reviewer"
+            and field.get("kind") == "longtext"
+            and field.get("id") not in RELEVANCE_EXCLUDED_IDS
+        ):
+            return field.get("id")
+    return None
 
 
 def _as_list(value):
@@ -219,6 +243,7 @@ def effective(profile, event):
         "event": event_info,
         "session_types": session_types,
         "fields": fields,
+        "relevance_field": relevance_field_id(fields),
         "rubric": copy.deepcopy(profile.get("rubric") or {}),
         "rules": copy.deepcopy(profile.get("rules") or []),
         "rejection_reasons": list(profile.get("rejection_reasons") or []),

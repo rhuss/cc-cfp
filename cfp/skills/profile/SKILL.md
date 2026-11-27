@@ -54,7 +54,7 @@ If a screenshot list was given, Read each image and extract field labels, their 
 
 ### Step 3: Build the draft
 
-Build one profile JSON following the schema of the shipped KubeCon profile (keys listed under "Draft JSON shape" below). Use the snake_case field ids from the guidance file (`title`, `abstract`, `benefits`, `audience_level`, `track`, `format`, ...). Fill `## Drafting guidance` with what reviewers reward and punish, the pass behavior assumption when no number was published, and any historic limits with the URL they came from.
+Build one profile JSON following the schema of the shipped KubeCon profile (keys listed under "Draft JSON shape" below). Use the snake_case field ids from the guidance file (`title`, `abstract`, `value_to_community`, `audience_level`, `track`, `format`, ...). Fill `## Drafting guidance` with what reviewers reward and punish, the pass behavior assumption when no number was published, and any historic limits with the URL they came from.
 
 Build an event override JSON as well when the input names a specific edition: a year in the name or URL, or `--event`. Dates, tracks, location, and per-edition session type variations go into the override, never into the family profile.
 
@@ -124,7 +124,7 @@ Run `python3 -I "$PLUGIN_ROOT/scripts/cfp_store.py" profile show --profile <id> 
 
 - Header: profile name, platform, profile approval; when an event is given, its name, location, dates, CFP open and close with timezone, notification, `days_to_close` (say "closed" when negative), and event approval; `approved` from the result is the combined status.
 - Session types: table with id, name, duration, min and max speakers, notes.
-- Fields: table with id, label, kind, required, limit, limit_status, audience (options listed under the table for choice kinds).
+- Fields: table with id, label, kind, required, limit, limit_status, audience (options listed under the table for choice kinds). Below the table name the reviewer-only relevance field from `relevance_field`, or say that the form has none when it is null.
 - Rubric: scale, pass average, pass minimum criterion, then each criterion with its description.
 - Rules: table with id, kind, severity, source (shortened URL or `screenshot:<file>` or empty).
 - Tracks: the list from the event override, or "no event chosen" without `--event`.

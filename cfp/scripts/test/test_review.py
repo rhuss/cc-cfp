@@ -53,8 +53,10 @@ def test_packet_contents(seeded_store, pid):
     assert len(packet["examples"]) == 3
     assert packet["examples"][0]["title"] == "Ex 3"
     assert all(set(e) >= {"title", "abstract", "benefits", "event", "year", "origin"} for e in packet["examples"])
-    assert packet["fields"][0] == {"id": "title", "label": "Session Title", "audience": "public", "required": True, "text": "A Title"}
-    assert next(f for f in packet["fields"] if f["id"] == "value_to_community")["audience"] == "reviewer"
+    assert packet["fields"][0] == {"id": "title", "label": "Session Title", "kind": "text", "audience": "public", "required": True, "text": "A Title"}
+    value = next(f for f in packet["fields"] if f["id"] == "value_to_community")
+    assert value["audience"] == "reviewer" and value["kind"] == "longtext"
+    assert packet["relevance_field"] == "value_to_community"
     assert packet["audience_level"] == "Intermediate" and packet["track"] == "Security"
     assert packet["session_type"]["id"] == "session" and packet["session_type"]["duration_min"] == 30
     assert packet["bio"] == "Bio."
