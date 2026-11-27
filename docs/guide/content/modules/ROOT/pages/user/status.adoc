@@ -75,8 +75,8 @@ If some proposal files can't be read, cfp reports each one once with its path an
 Every status change is one command with the proposal id and the new status.
 Recording it with the right date keeps the Date column of the list accurate.
 
-`cfp` records today's date unless you pass `--date <YYYY-MM-DD>`.
-A date in any other format gets you a question for the date again.
+For every status except `draft`, `cfp` records the status date as today's date unless you pass `--date <YYYY-MM-DD>`.
+A date cfp can't read as `YYYY-MM-DD` gets you a question for the date again.
 
 Let's record a decision for Ada.
 Say the committee turns her practice proposal down on 2026-12-07, the notification date of the `kubecon-eu-2027` edition.
