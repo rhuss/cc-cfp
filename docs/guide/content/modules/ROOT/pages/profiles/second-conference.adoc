@@ -1,5 +1,316 @@
 = A second conference: what changes
-:guide-no-sources:
 
-// STUB
-This page is written by a later task of the guide plan.
+// Sources:
+// cfp:README.md:5
+// cfp:cfp/knowledge-base/guidance/profile-research.md:23-24,26-27,33,35,39,41,46,53,78,82-87,99
+// cfp:cfp/knowledge-base/guidance/benefits-field.md:5
+// cfp:cfp/knowledge-base/templates/profile.md:1-53
+// cfp:cfp/knowledge-base/profiles/kubecon/profile.md:4,157-203
+// cfp:cfp/scripts/cfplib/profile.py:8-17,22-58,63-82,96-106,184-201,206,248-256,259,273-355
+// cfp:cfp/scripts/cfplib/store.py:71-72
+// cfp:cfp/scripts/cfplib/review.py:9-13,73,91-115,135-141
+// cfp:cfp/scripts/cfplib/preflight.py:8-11,141-154,196-203,213-240,243-275
+// cfp:cfp/scripts/cfplib/proposals.py:10,232-256,270-277,280-292
+// cfp:cfp/scripts/cfplib/pasteview.py:104-106
+// cfp:cfp/scripts/test/test_preflight.py:279-282
+// cfp:cfp/skills/_shared/preflight-checks.md:3,16,33-34,37,39-54
+// cfp:cfp/skills/draft/SKILL.md:53,55,110,114-115,121
+// cfp:cfp/skills/profile/SKILL.md:57,59,125,131,142-161
+// cfp:cfp/agents/committee-reviewer.md:23,25,31-32,37-39
+
+When your next proposal goes to a new edition of KubeCon + CloudNativeCon, the profile you already have stays in place.
+The new edition gets an event on that profile, with its own dates, tracks, location, and session type variations.
+When cfp refreshes a profile for a new edition, it asks before it touches anything in the family profile.
+The rubric, the rules, the rejection reasons, and the bio settings come from the profile, whichever edition you draft for.
+
+A second conference is different.
+It gets a profile of its own, and almost every part of that profile can look different from KubeCon's.
+You build it with `/cfp:profile new`, and xref:profiles/new.adoc[Research a new conference] walks you through that.
+This page picks up where that one stops.
+It goes through the differences you're likely to meet and says, for each one, what cfp does about it.
+
+Let's use ExampleConf for that, a fictional conference made up for this page.
+Its values aren't taken from any real call for proposals.
+The excerpts below come from its profile file, `profiles/exampleconf/profile.md` in your store, and every key in them is one the profile schema knows.
+If a term such as event, verification label, or relevance field is new to you, xref:profiles/index.adoc[How profiles work] explains it, and xref:profiles/kubecon.adoc[The shipped KubeCon profile] shows the KubeCon values to compare with.
+
+== Another submission platform
+
+The shipped KubeCon profile says `platform: sessionize`.
+ExampleConf runs its own submission site:
+
+[source,yaml]
+----
+name: ExampleConf
+platform: exampleconf-portal
+----
+
+`platform` is free text.
+The research checklist gives `sessionize`, `pretalx`, and `cfp.dev` as examples, and the profile validation doesn't check the value at all.
+`/cfp:profile show` prints it in its header.
+
+Whatever the platform, nothing is submitted on your behalf: you paste the texts into the conference site yourself.
+When the site's form sits behind a login, screenshots of it are the most reliable source for the profile, and xref:profiles/new.adoc[Research a new conference] shows how cfp takes them in.
+
+== Session types of its own
+
+ExampleConf has no panels or tutorials.
+It has short talks, workshops with at least two instructors, and ten-minute demo slots:
+
+[source,yaml]
+----
+session_types:
+  - id: talk
+    name: Talk
+    duration_min: 25
+    min_speakers: 1
+    max_speakers: 2
+    notes: ""
+  - id: workshop
+    name: Hands-on Workshop
+    duration_min: 90
+    min_speakers: 2
+    max_speakers: 3
+    notes: At least two instructors.
+  - id: demo
+    name: Demo Slot
+    duration_min: 10
+    min_speakers: 1
+    max_speakers: 1
+    notes: ""
+----
+
+`/cfp:draft` lists these session types with their name, duration, and speaker range, and asks you to pick one.
+When the type you pick has `min_speakers` above 1, like the workshop here, cfp tells you that a solo speaker can't satisfy it and asks whether you have co-speakers.
+When the form has a `format` field, its default is the name of the session type you picked.
+
+An event can still change a session type for one edition, or remove it, through `session_type_overrides`.
+The session type ids also matter for rules, as you'll see in <<rules>>.
+
+== A rubric with its own criteria and thresholds
+
+KubeCon scores five criteria on a scale up to 5.
+ExampleConf publishes three criteria on a scale up to 4, and no pass threshold:
+
+[source,yaml]
+----
+rubric:
+  scale_max: 4
+  pass_average: 3.0
+  pass_min_criterion: 2.0
+  criteria:
+    - id: clarity
+      name: Clarity
+      description: 1 is hard to follow. 4 is a clear problem, a clear plan for the session, and takeaways in full sentences.
+    - id: usefulness
+      name: Usefulness
+      description: 1 gives attendees nothing to try. 4 leaves them with something they can use the next working day.
+    - id: fit
+      name: Fit
+      description: 1 is off topic for ExampleConf. 4 is a topic the ExampleConf audience keeps asking for.
+----
+
+The committee review scores exactly these criteria.
+The reviewer takes the criterion ids from what it's given for the proposal, never from its own instructions, and cfp rejects a review that misses a score or a comment for any of them.
+Each score lies between 0 and `scale_max`, in half steps at most.
+The reviewer reads each `description` literally, as the meaning of each level, so the research puts the conference's wording for the levels into it.
+
+`cfp` computes the verdict itself.
+A proposal passes when the average is at least `pass_average` and no criterion is below `pass_min_criterion`.
+When the rubric leaves out either key, the review uses 4.0 and 3.0.
+
+ExampleConf publishes no numbers, so where do 3.0 and 2.0 come from?
+For a conference like that, the research sets a defensible default and records it as an assumption in the profile's drafting guidance (see <<guidance>>).
+A rubric without any criteria stops the committee review from running, and the validation reports an approved profile whose rubric has none.
+
+One more difference concerns recordings.
+When your speaker resources hold no recording, the reviewer caps the Speaker criterion at the level the rubric gives for "no recorded examples", which is 4 on the KubeCon scale (lower when the bio shows no depth in the topic either).
+A rubric that names no such level has no cap.
+ExampleConf's rubric has no Speaker criterion and names no such level, so there's no cap.
+xref:user/review.adoc[Committee review and voice pass] explains how the scoring and the cap work.
+
+[#rules]
+== Rules that are mostly custom
+
+The shipped KubeCon profile has seven rules, and none of them is of kind `custom`.
+ExampleConf has one rule that cfp can compute and three that it can't:
+
+[source,yaml]
+----
+rules:
+  - id: speaker-count
+    kind: speaker_count
+    severity: disqualify
+    params: {}
+    source: https://exampleconf.example/2027/cfp/
+    text: Each session type has a fixed number of speakers.
+  - id: complete-at-close
+    kind: custom
+    severity: disqualify
+    params: {}
+    source: https://exampleconf.example/2027/cfp/
+    text: Proposals with an empty required field at the CFP close are not reviewed.
+  - id: workshop-in-person
+    kind: custom
+    severity: disqualify
+    params:
+      session_type: workshop
+    source: https://exampleconf.example/2027/cfp/
+    text: Every workshop instructor attends in person.
+  - id: workshop-install-list
+    kind: custom
+    severity: warn
+    params:
+      session_type: workshop
+    source: https://exampleconf.example/2027/cfp/
+    text: A workshop abstract names the software attendees install before the session.
+----
+
+The pre-flight goes through the rules the profile lists.
+It computes six kinds from your store: submission limit, repeat talks, track, speaker count, and the two panel rules.
+For `speaker-count`, it checks whether you plus your co-speakers fit the chosen session type's minimum and maximum.
+A computed rule that ExampleConf doesn't list, such as a submission limit, isn't checked.
+
+A `custom` rule has no evaluator of its own.
+The pre-flight hands each one, with its id, severity, parameters, text, and source, to Claude, which judges it against your proposal from the rule's text.
+Here's how the three ExampleConf rules come out:
+
+* `params.session_type` narrows a rule to one session type.
+For a talk or a demo proposal, both workshop rules don't apply.
+* `complete-at-close` is a rule about incomplete proposals, so it's violated as long as a required field is still empty.
+* For a workshop proposal, `workshop-in-person` depends on something your store doesn't hold.
+Because the rule can disqualify, cfp quotes the rule and asks you whether your proposal meets it.
+
+A violated custom rule takes its severity from the profile.
+So a violated `disqualify` rule blocks `ready` like a computed rule, and a `warn` rule doesn't.
+A rule without a `severity` counts as `disqualify`.
+xref:user/preflight.adoc[Pre-flight, counts, and the paste view] lists the four verdicts and what each of your answers leads to.
+How to write a custom rule's text so that it can be checked is part of xref:profiles/new.adoc[Research a new conference].
+
+== Audience levels worded differently
+
+KubeCon offers `Any`, `Beginner`, `Intermediate`, and `Advanced`.
+ExampleConf asks a different question, and its help text defines each answer:
+
+[source,yaml]
+----
+fields:
+  # title and abstract come first
+  - id: audience_level
+    label: Who is this for?
+    required: true
+    kind: choice
+    limit:
+    limit_status: unverified
+    source: ""
+    options:
+      - New to the topic
+      - Uses it at work
+      - Builds or maintains it
+    audience: public
+    guidance: "New to the topic: no prior experience needed. Uses it at work: attendees run it in production. Builds or maintains it: attendees contribute to it or extend it."
+----
+
+`/cfp:draft` asks you to pick one of the field's options and never generates the answer.
+`cfp` accepts only one of the options, matched without regard to case, and stores it as the form spells it.
+Saving the field also updates the level that the pre-flight reads.
+
+The pre-flight's audience level check compares your abstract with the offered levels in form order.
+When the field's `guidance` defines the levels, as ExampleConf's does, the check uses those definitions.
+On a mismatch it names the better level exactly as the form words it, for example `Builds or maintains it`.
+The committee reviewer checks the level against the content as well.
+
+So keep the field id `audience_level`, whatever the form calls the field.
+The research uses shared ids like this one so that the draft flow recognizes the same field across conferences.
+When the profile has no `audience_level` field, the pre-flight skips the comparison.
+
+== A form without a speaker bio
+
+ExampleConf's form asks for no speaker bio with a proposal:
+
+[source,yaml]
+----
+bio_on_form: false
+bio_limit:
+bio_limit_status: unverified
+----
+
+Only an explicit `bio_on_form: false` switches the bio off.
+The research sets it only when screenshots cover the complete form and show no bio.
+
+With the bio off, `/cfp:draft` says in one line that the form has no speaker bio and attaches none.
+The paste view prints no bio section.
+The review packet carries an empty bio, and the committee reviewer never counts that against the proposal.
+A bio you stored on the proposal anyway is still counted, with no limit and the status `not-on-form`, as xref:user/preflight.adoc[Pre-flight, counts, and the paste view] shows.
+
+== Another reviewer-only relevance field
+
+KubeCon's relevance field is `value_to_community`.
+ExampleConf has three text fields that only reviewers read:
+
+[source,yaml]
+----
+fields:
+  # title, abstract, and audience_level come first
+  - id: previously_presented
+    label: Has this talk been given before?
+    required: false
+    kind: longtext
+    limit: 300
+    limit_status: unverified
+    source: ""
+    audience: reviewer
+    guidance: Where and when, and what changed since.
+  - id: program_notes
+    label: Notes for the program team
+    required: true
+    kind: longtext
+    limit: 800
+    limit_status: unverified
+    source: ""
+    audience: reviewer
+    guidance: Why this talk belongs at ExampleConf this year.
+  - id: room_needs
+    label: Room and equipment needs
+    required: false
+    kind: longtext
+    limit: 200
+    limit_status: unverified
+    source: ""
+    audience: reviewer
+    guidance: Power, network, and seating the session needs. Workshops list the laptop setup attendees bring.
+----
+
+`cfp` picks exactly one relevance field.
+ExampleConf has no `benefits` field, so cfp takes the first reviewer-only long-text field in form order, leaving out `previously_presented`.
+That's `program_notes`, and `/cfp:profile show` reports it as the `relevance_field`.
+
+`/cfp:draft` writes `program_notes` with its guidance for relevance fields: who benefits by persona, why now, what's new, credentials and evidence, and the data shown, without restating the abstract.
+That guidance says other conferences have such a field under other names and treats them all the same way.
+`room_needs` is a reviewer-only text field too, but cfp drafts it from its own `guidance`, like any other text field.
+
+The committee reviewer checks that the relevance field adds what the abstract doesn't have.
+When it restates the abstract, the reviewer lowers the relevance criterion, or the closest criterion when the rubric has none by that name.
+ExampleConf's rubric has no criterion named relevance.
+
+[#guidance]
+== Drafting guidance of its own
+
+Every field carries its own `guidance`, and `/cfp:draft` uses it when it drafts that field.
+ExampleConf's `room_needs` above is one example.
+
+On top of that, each profile has a `## Drafting guidance` section in the body of its file, below the front matter.
+`/cfp:profile new` fills it with what reviewers reward and punish, its pass assumption when the conference published no number, and any historic limits with the URL they came from.
+For ExampleConf it could start like this:
+
+[source,markdown]
+----
+## Drafting guidance
+
+ExampleConf publishes its three criteria but no pass threshold.
+Assumption: pass_average 3.0 and pass_min_criterion 2.0 on the 4-point scale.
+The program team prefers a live demo over slides only.
+----
+
+`cfp` reads this section from the profile file of the conference you draft for.
+`/cfp:profile show` prints it in full, and the committee review packet carries it too.

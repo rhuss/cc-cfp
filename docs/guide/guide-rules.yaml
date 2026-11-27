@@ -147,3 +147,13 @@ rules:
       - 'update everything shown'
       - 'profile only'
       - '--screenshots'
+  - glob: "content/modules/ROOT/pages/profiles/second-conference.adoc"
+    require:
+      - '(?i)fictional'
+      - 'custom'
+      - 'bio_on_form: false'
+      - 'audience_level'
+      - 'disqualify'
+      - 'relevance_field'
+      - 'xref:profiles/new\.adoc'
+      - 'xref:user/preflight\.adoc'
