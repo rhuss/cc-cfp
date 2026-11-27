@@ -1,0 +1,78 @@
+schema: 1
+name: paste-view
+variant: default
+kind: cli
+image: content/modules/ROOT/images/visuals/paste-view.svg
+environment:
+  name: cfp
+  image: localhost/cc-cfp-cli:0.1.1
+  digest: sha256:dea46a7cc383dfd5ee5561f635eda5c0875472eb59321e40cf2de829d568e372
+  platform: linux/arm64
+  source: cfp
+  source_commit: e0827543bca36eb6ca9ee87095f4584db5786264
+fingerprint: a0063e4cca1353eb
+capture_env: 4278a241e451
+captured_at: '2026-11-27T06:56:00Z'
+redaction:
+  rules:
+  - home-path
+  - user-path
+  - user-at
+  - k8s-api
+  - hostname
+  - ipv4
+  - jwt
+  - bearer
+  - api-key
+  - private-key
+  disabled: []
+  replacements:
+    home-path: 0
+    user-path: 0
+    user-at: 0
+    k8s-api: 0
+    hostname: 0
+    ipv4: 0
+    jwt: 0
+    bearer: 0
+    api-key: 0
+    private-key: 0
+masks: 0
+scripts: []
+highlights: []
+style: f3b1db2105e8270e
+text: |-
+  $ python3 -I /opt/cfp/scripts/cfp_store.py pasteview --store /tmp/store --proposal kubecon-eu-2027--safe-node-drains --f
+  ormat markdown | head -n 25
+  # Paste view: kubecon-eu-2027--safe-node-drains
+
+  Event: KubeCon + CloudNativeCon Europe 2027 (kubecon-eu-2027) | Session type: session | Status: draft
+
+  Warning: Some limits are approximate (unverified): the live form may differ. Confirm them with screenshots via /cfp:prof
+  ile refresh.
+  Warning: Fields over their limit: title
+  Warning: Required fields not drafted: audience_level, track, format, case_study, previously_presented, cncf_oss_projects
+
+  ## 1. Session Title (title, public, required)
+
+  84/75 chars (limit approximate, unverified) [OVER LIMIT, limit unverified]
+
+  Drain Nodes Without Dropping Requests: PodDisruptionBudgets That Hold Under Pressure
+
+  ## 2. Description (abstract, public, required)
+
+  541/1000 chars
+
+  Node upgrades should be routine, yet many clusters still drop requests every time a node drains. PodDisruptionBudgets lo
+  ok simple, but readiness gaps, slow endpoint updates, and budgets that block eviction forever turn each maintenance wind
+  ow into an incident. This session walks through a drain from the first cordon to the last eviction and shows where traff
+  ic gets lost. Attendees learn how to size budgets for real replica counts, how to pair them with preStop hooks and readi
+  ness probes, and how to test a drain before the next upgrade.
+
+  ## 3. Value to the community (value_to_community, reviewer-only, required)
+
+  295 chars (no limit)
+
+  Every cluster operator drains nodes, and managed platforms now upgrade nodes on a fixed schedule, so the window for manu
+  al babysitting is gone. Platform teams and application owners both benefit: the talk gives them a shared checklist for b
+  udgets and probes that works on any conformant cluster.

@@ -75,7 +75,7 @@ visuals:
     kind: cli
     env: cfp
     command: python3 -I /opt/cfp/scripts/cfp_store.py pasteview --store /tmp/store --proposal kubecon-eu-2027--safe-node-drains --format markdown | head -n 25
-    width: 100
+    width: 120
 #   mlflow-runs:
 #     kind: web
 #     env: mlflow            # a web environment
