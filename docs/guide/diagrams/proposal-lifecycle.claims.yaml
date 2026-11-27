@@ -1,0 +1,162 @@
+diagram: proposal-lifecycle
+claims:
+  - id: status-draft
+    kind: label
+    elements: [s_draft]
+    text: draft is one of the seven proposal statuses and the default status of a new proposal.
+    sources:
+      - "cfp:cfp/scripts/cfplib/proposals.py:7,21"
+  - id: status-ready
+    kind: label
+    elements: [s_ready]
+    text: ready is a proposal status.
+    sources:
+      - "cfp:cfp/scripts/cfplib/proposals.py:7"
+  - id: status-submitted
+    kind: label
+    elements: [s_submitted]
+    text: submitted is a proposal status.
+    sources:
+      - "cfp:cfp/scripts/cfplib/proposals.py:7"
+  - id: status-accepted
+    kind: label
+    elements: [s_accepted]
+    text: accepted is a proposal status.
+    sources:
+      - "cfp:cfp/scripts/cfplib/proposals.py:7"
+  - id: status-presented-final
+    kind: label
+    elements: [s_presented]
+    text: presented is a proposal status with no allowed transition out of it (final).
+    sources:
+      - "cfp:cfp/scripts/cfplib/proposals.py:7"
+      - "cfp:cfp/scripts/cfplib/lifecycle.py:17,147-150"
+  - id: status-rejected-final
+    kind: label
+    elements: [s_rejected]
+    text: rejected is a proposal status with no allowed transition out of it (final).
+    sources:
+      - "cfp:cfp/scripts/cfplib/proposals.py:7"
+      - "cfp:cfp/scripts/cfplib/lifecycle.py:15,147-150"
+  - id: status-withdrawn-final
+    kind: label
+    elements: [s_withdrawn]
+    text: withdrawn is a proposal status with no allowed transition out of it (final).
+    sources:
+      - "cfp:cfp/scripts/cfplib/proposals.py:7"
+      - "cfp:cfp/scripts/cfplib/lifecycle.py:16,147-150"
+  - id: counted
+    kind: label
+    elements: [c_submitted, c_accepted, c_rejected, c_presented]
+    text: >-
+      submitted, accepted, rejected, and presented proposals count toward the event's submission
+      limit; draft, ready, and withdrawn do not.
+    sources:
+      - "cfp:cfp/scripts/cfplib/lifecycle.py:29,58-74"
+  - id: guard
+    kind: label
+    elements: [n_guard]
+    text: >-
+      draft to ready needs a last committee review verdict of pass, no edit after that review
+      (review_stale), and a pre-flight that ran without disqualifying findings; with --force,
+      ready is set without these checks.
+    sources:
+      - "cfp:cfp/scripts/cfplib/lifecycle.py:39-55,152-159"
+  - id: ready-edit
+    kind: label
+    elements: [n_ready]
+    text: >-
+      A content edit (field, bio, or meta update) of a ready proposal moves it back to draft and
+      marks its checks stale.
+    sources:
+      - "cfp:cfp/scripts/cfplib/proposals.py:93-105,275,300,375"
+  - id: rejected-reopen
+    kind: label
+    elements: [n_rejected]
+    text: >-
+      /cfp:status reopen starts a new draft from the rejected proposal's talk for another event;
+      the source proposal keeps its status.
+    sources:
+      - "cfp:cfp/skills/status/SKILL.md:54-61"
+  - id: accepted-effect
+    kind: label
+    elements: [n_accepted]
+    text: Setting a proposal to accepted adds a calibration example (origin own-accepted) to its profile.
+    sources:
+      - "cfp:cfp/scripts/cfplib/lifecycle.py:90-119,166-167"
+      - "cfp:cfp/skills/status/SKILL.md:46"
+  - id: presented-effect
+    kind: label
+    elements: [n_presented]
+    text: Setting a proposal to presented records a presented outing on its talk.
+    sources:
+      - "cfp:cfp/scripts/cfplib/lifecycle.py:122-137,168-169"
+  - id: t-draft-ready
+    kind: connects
+    elements: [t_draft_ready]
+    text: draft may move to ready.
+    sources:
+      - "cfp:cfp/scripts/cfplib/lifecycle.py:10-11"
+  - id: t-draft-submitted
+    kind: connects
+    elements: [t_draft_submitted]
+    text: draft may move to submitted directly.
+    sources:
+      - "cfp:cfp/scripts/cfplib/lifecycle.py:10-11"
+  - id: t-draft-withdrawn
+    kind: connects
+    elements: [t_draft_withdrawn]
+    text: draft may move to withdrawn.
+    sources:
+      - "cfp:cfp/scripts/cfplib/lifecycle.py:10-11"
+  - id: t-ready-draft
+    kind: connects
+    elements: [t_ready_draft]
+    text: ready may move back to draft (the user reopens it for edits).
+    sources:
+      - "cfp:cfp/scripts/cfplib/lifecycle.py:7-8,10,12"
+  - id: t-ready-submitted
+    kind: connects
+    elements: [t_ready_submitted]
+    text: ready may move to submitted.
+    sources:
+      - "cfp:cfp/scripts/cfplib/lifecycle.py:10,12"
+  - id: t-ready-withdrawn
+    kind: connects
+    elements: [t_ready_withdrawn]
+    text: ready may move to withdrawn.
+    sources:
+      - "cfp:cfp/scripts/cfplib/lifecycle.py:10,12"
+  - id: t-submitted-accepted
+    kind: connects
+    elements: [t_submitted_accepted]
+    text: submitted may move to accepted.
+    sources:
+      - "cfp:cfp/scripts/cfplib/lifecycle.py:10,13"
+  - id: t-submitted-rejected
+    kind: connects
+    elements: [t_submitted_rejected]
+    text: submitted may move to rejected.
+    sources:
+      - "cfp:cfp/scripts/cfplib/lifecycle.py:10,13"
+  - id: t-submitted-withdrawn
+    kind: connects
+    elements: [t_submitted_withdrawn]
+    text: submitted may move to withdrawn.
+    sources:
+      - "cfp:cfp/scripts/cfplib/lifecycle.py:10,13"
+  - id: t-accepted-presented
+    kind: connects
+    elements: [t_accepted_presented]
+    text: accepted may move to presented.
+    sources:
+      - "cfp:cfp/scripts/cfplib/lifecycle.py:10,14"
+  - id: t-accepted-withdrawn
+    kind: connects
+    elements: [t_accepted_withdrawn]
+    text: accepted may move to withdrawn (the speaker cancels after acceptance).
+    sources:
+      - "cfp:cfp/scripts/cfplib/lifecycle.py:8-10,14"
+  - id: legend
+    kind: legend
+    elements: [lg_title, lg_gray, lg_gray_t, lg_blue, lg_blue_t, lg_orange, lg_orange_t, lg_count, lg_count_t]
