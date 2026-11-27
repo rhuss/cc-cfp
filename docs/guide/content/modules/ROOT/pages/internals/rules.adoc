@@ -6,7 +6,7 @@
 // cfp:cfp/scripts/cfplib/lifecycle.py:10-18,29,32-55,58-74,131,152-159,166-174
 // cfp:cfp/scripts/cfplib/review.py:5-6,91-127,130-167
 // cfp:cfp/scripts/cfplib/text.py:6-52
-// cfp:cfp/scripts/cfplib/proposals.py:79-105,260-292
+// cfp:cfp/scripts/cfplib/proposals.py:58-59,79-105,260-292
 // cfp:cfp/scripts/cfplib/counts.py:6-36
 // cfp:cfp/scripts/cfp_store.py:7-8,535-563
 // cfp:cfp/skills/_shared/preflight-checks.md:1-62
@@ -173,7 +173,7 @@ A `custom` rule gets one of four verdicts: `violated`, `met`, `does not apply`, 
 Only `violated` adds a finding by itself.
 `cannot tell` on a `disqualify` rule leads to a question; your answer `no` adds the finding as for `violated`, and `not sure` adds it with the severity `warn`.
 `cannot tell` on a `warn` rule adds nothing.
-Rules of kind `vendor_pitch` get no finding at all; the committee review scores them.
+Rules of kind `vendor_pitch` get no finding at all; they stay with the committee review.
 The same file also defines the audience level comparison, which records a mismatch under the rule id `audience-level` with the severity `warn`.
 
 The skill writes each finding to a JSON file and records it with `preflight add-finding --from-json`, so free text never goes on the command line.
