@@ -5,6 +5,9 @@ import datetime
 
 from cfplib import CfpError, config, lifecycle, profile, proposals, talks, text as textutil
 
+# Rules this module cannot compute. They are returned under "manual": the skills
+# judge `custom` rules against the proposal and record violations through
+# add_finding; `vendor_pitch` stays with the committee review.
 MANUAL_KINDS = ("vendor_pitch", "custom")
 SEVERITIES = profile.SEVERITIES
 AUDIENCE_RULE_SOURCE = "FR-029 audience level comparison"
@@ -216,7 +219,16 @@ def run(store_path, proposal_id, today=None):
             continue
         kind = rule.get("kind")
         if kind in MANUAL_KINDS:
-            manual.append({"rule": rule.get("id"), "kind": kind, "text": rule.get("text", ""), "source": rule.get("source") or ""})
+            manual.append(
+                {
+                    "rule": rule.get("id"),
+                    "kind": kind,
+                    "severity": rule.get("severity", "disqualify"),
+                    "params": rule.get("params") or {},
+                    "text": rule.get("text", ""),
+                    "source": rule.get("source") or "",
+                }
+            )
             continue
         evaluator = EVALUATORS.get(kind)
         if evaluator is None:
@@ -229,22 +241,35 @@ def run(store_path, proposal_id, today=None):
 
 
 def add_finding(store_path, proposal_id, rule, severity, text, source="", today=None):
-    if severity not in SEVERITIES:
-        raise CfpError(f"severity must be one of {', '.join(SEVERITIES)}")
+    """Record a finding a skill judged (audience level, a custom rule).
+
+    For a rule id of the effective profile, the finding takes the rule's kind,
+    and its severity and source unless the caller passes its own. So a
+    violated ``custom`` rule with severity ``disqualify`` blocks ``ready``
+    like a computed rule. Any other rule id needs an explicit severity.
+    """
     rule = str(rule or "").strip()
     text = str(text or "").strip()
     if not rule or not text:
         raise CfpError("a finding needs a rule id and a text")
     ctx = _Context(store_path, proposal_id, today)
-    findings = list((ctx.meta.get("preflight") or {}).get("findings") or [])
-    findings.append(
-        {
-            "rule": rule,
-            "kind": "manual",
-            "severity": severity,
-            "text": text,
-            "source": source or (AUDIENCE_RULE_SOURCE if rule == "audience-level" else ""),
-        }
+    profile_rule = next(
+        (r for r in ctx.eff.get("rules") or [] if isinstance(r, dict) and r.get("id") == rule), None
     )
+    if profile_rule is not None:
+        kind = profile_rule.get("kind") or "manual"
+        severity = severity or profile_rule.get("severity", "disqualify")
+        source = source or profile_rule.get("source") or ""
+    else:
+        kind = "manual"
+        if not severity:
+            raise CfpError(
+                f"'{rule}' is not a rule of this profile, so the finding needs a severity ({' or '.join(SEVERITIES)})"
+            )
+        source = source or (AUDIENCE_RULE_SOURCE if rule == "audience-level" else "")
+    if severity not in SEVERITIES:
+        raise CfpError(f"severity must be one of {', '.join(SEVERITIES)}, got {severity!r}")
+    findings = list((ctx.meta.get("preflight") or {}).get("findings") or [])
+    findings.append({"rule": rule, "kind": kind, "severity": severity, "text": text, "source": source})
     ok = _store_result(ctx, findings, today)
     return {"ok": ok, "findings": findings}

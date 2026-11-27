@@ -34,7 +34,7 @@ The store is resolved in this order: `--store <path>` on a CLI call, the `CFP_ST
 | `/cfp:draft [--profile <id>] [--event <id>] [--talk <id>] [--proposal <id>] [--from <path or URL>]` | Interactive drafting from an idea, existing material, a stored talk, or an old proposal: story interview, title and abstract angles, every form field, committee review loop, voice pass, pre-flight, paste view |
 | `/cfp:bio [new \| list \| edit <name> \| delete <name> \| resource add \| resource list \| resource delete <id>]` | Bio variations (third person, with character counts) and speaker resources (recordings, repositories, blog posts, prior sessions) |
 | `/cfp:profile [new <name or URL> \| refresh <id> [--event <id>] [--screenshots <paths>] \| show <id> \| list]` | Research a conference's public CFP pages and form screenshots into a profile, refresh an edition's event override, inspect profiles and deadlines |
-| `/cfp:check <proposal-id>` | Standalone pre-flight: hard rules, audience level check, character counts, and whether the proposal can become ready |
+| `/cfp:check <proposal-id>` | Standalone pre-flight: hard rules, the profile's custom rules, audience level check, character counts, and whether the proposal can become ready |
 | `cfp:committee-review --proposal <id>` (skill) | One simulated program committee round on a stored proposal; `/cfp:draft` runs it in its review loop |
 | `/cfp:status [list [--status <s>] \| set <id> <status> [--date <d>] \| reopen <id> [--event <id>]]` | Lifecycle: draft, ready, submitted, accepted, rejected, withdrawn, presented; reopen a rejected proposal for another event |
 

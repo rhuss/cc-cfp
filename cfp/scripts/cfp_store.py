@@ -235,7 +235,10 @@ def build_parser():
     p.add_argument("--proposal", required=True)
     p.add_argument("--from-json", default=None, help="JSON object with rule, severity, text, source (flags win)")
     p.add_argument("--rule", default=None)
-    p.add_argument("--severity", default=None, choices=list(preflight.SEVERITIES))
+    p.add_argument(
+        "--severity", default=None, choices=list(preflight.SEVERITIES),
+        help="optional for a rule id of the profile (the rule's severity applies), required otherwise",
+    )
     p.add_argument("--text", default=None)
     p.add_argument("--source", default=None)
 
@@ -527,9 +530,12 @@ def cmd_preflight_add_finding(args):
     severity = args.severity if args.severity is not None else values.get("severity")
     text = args.text if args.text is not None else values.get("text")
     source = args.source if args.source is not None else values.get("source", "")
-    if not rule or not severity or not text:
-        raise UsageError("usage error: add-finding needs --rule, --severity, and --text (flags or --from-json)")
-    if severity not in preflight.SEVERITIES:
+    if not rule or not text:
+        raise UsageError(
+            "usage error: add-finding needs --rule and --text (flags or --from-json); "
+            "--severity is optional for a rule id of the profile"
+        )
+    if severity and severity not in preflight.SEVERITIES:
         raise UsageError(f"usage error: severity must be {' or '.join(preflight.SEVERITIES)}, got {severity!r}")
     return _preflight_payload(
         preflight.add_finding(ctx_store(args), args.proposal, rule, severity, text, source=source or "", today=ctx_today(args))

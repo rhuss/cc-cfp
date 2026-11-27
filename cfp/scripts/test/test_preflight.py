@@ -2,7 +2,7 @@
 
 import pytest
 
-from cfplib import config, frontmatter, preflight, proposals, store, talks
+from cfplib import CfpError, config, frontmatter, lifecycle, preflight, proposals, store, talks
 
 TODAY = "2026-10-09"
 EVENT = "kubecon-eu-2027"
@@ -274,6 +274,80 @@ def test_add_finding_appends_and_recomputes_ok(seeded_store):
     assert len(stored["findings"]) == 1
     result = preflight.add_finding(s, pid, "custom-check", "disqualify", "Manual block.", source="https://x", today=TODAY)
     assert result["ok"] is False and len(result["findings"]) == 2
+
+
+CUSTOM_RULE = {
+    "id": "roadmap-only", "kind": "custom", "severity": "disqualify", "params": {"session_type": "roadmap"},
+    "source": "https://c", "text": "Roadmaps are for staff only.",
+}
+
+
+def add_rule(s, rule):
+    path = store.profile_path(s, "kubecon")
+    meta, body = frontmatter.load(path)
+    meta["rules"].append(dict(rule))
+    frontmatter.save(path, meta, body)
+
+
+def test_manual_rules_carry_severity_and_params(seeded_store):
+    s = seeded_store
+    add_rule(s, CUSTOM_RULE)
+    add_rule(s, {"id": "bare", "kind": "custom", "text": "No severity or params written."})
+    pid = make(s)
+    manual = {m["rule"]: m for m in preflight.run(s, pid, today=TODAY)["manual"]}
+    assert manual["roadmap-only"] == {
+        "rule": "roadmap-only", "kind": "custom", "severity": "disqualify", "params": {"session_type": "roadmap"},
+        "text": "Roadmaps are for staff only.", "source": "https://c",
+    }
+    assert manual["vendor-pitch"]["severity"] == "disqualify" and manual["vendor-pitch"]["params"] == {}
+    # a rule without a severity counts as disqualify, as profile validate assumes
+    assert manual["bare"]["severity"] == "disqualify" and manual["bare"]["params"] == {} and manual["bare"]["source"] == ""
+
+
+def test_add_finding_for_a_profile_rule_takes_kind_severity_and_source_from_the_profile(seeded_store):
+    s = seeded_store
+    add_rule(s, CUSTOM_RULE)
+    pid = make(s)
+    assert preflight.run(s, pid, today=TODAY)["ok"] is True
+    result = preflight.add_finding(s, pid, "roadmap-only", None, "The speaker company is not the organizer.", today=TODAY)
+    assert result["findings"][-1] == {
+        "rule": "roadmap-only", "kind": "custom", "severity": "disqualify",
+        "text": "The speaker company is not the organizer.", "source": "https://c",
+    }
+    assert result["ok"] is False
+    # a violated custom disqualify rule blocks ready like any computed rule
+    assert any("disqualifying" in reason for reason in lifecycle.ready_check(s, pid)["reasons"])
+
+    # an explicit severity and source win over the profile's (a rule that could not be confirmed)
+    preflight.run(s, pid, today=TODAY)
+    result = preflight.add_finding(s, pid, "roadmap-only", "warn", "Could not confirm the speaker company.", source="https://other", today=TODAY)
+    assert result["findings"][-1]["severity"] == "warn" and result["findings"][-1]["source"] == "https://other"
+    assert result["findings"][-1]["kind"] == "custom" and result["ok"] is True
+
+
+def test_add_finding_needs_a_severity_for_rules_outside_the_profile(seeded_store):
+    pid = make(seeded_store)
+    preflight.run(seeded_store, pid, today=TODAY)
+    with pytest.raises(CfpError, match="severity"):
+        preflight.add_finding(seeded_store, pid, "made-up", None, "Text.", today=TODAY)
+    with pytest.raises(CfpError, match="severity"):
+        preflight.add_finding(seeded_store, pid, "made-up", "fatal", "Text.", today=TODAY)
+    assert proposals.show(seeded_store, pid)["preflight"]["findings"] == []
+
+
+def test_add_finding_cli_uses_profile_rule_defaults(seeded_store, run_cli, write_json):
+    add_rule(seeded_store, CUSTOM_RULE)
+    add_rule(seeded_store, {"id": "style", "kind": "custom", "severity": "warn", "params": {}, "source": "https://s", "text": "Third person."})
+    pid = make(seeded_store, "cli2")
+    listed = run_cli("preflight", "--proposal", pid)
+    assert {m["rule"]: m["severity"] for m in listed["manual"]} == {"vendor-pitch": "disqualify", "roadmap-only": "disqualify", "style": "warn"}
+    added = run_cli("preflight", "add-finding", "--proposal", pid, "--from-json", write_json({"rule": "style", "text": "The abstract says we."}))
+    assert added["findings"][-1] == {"rule": "style", "kind": "custom", "severity": "warn", "text": "The abstract says we.", "source": "https://s"}
+    assert added["passed"] is True
+    added = run_cli("preflight", "add-finding", "--proposal", pid, "--from-json", write_json({"rule": "roadmap-only", "text": "Not staff."}))
+    assert added["findings"][-1]["severity"] == "disqualify" and added["passed"] is False
+    no_severity = run_cli("preflight", "add-finding", "--proposal", pid, "--from-json", write_json({"rule": "made-up", "text": "t"}), expect_ok=False)
+    assert no_severity.code == 1 and "severity" in no_severity["error"]
 
 
 def test_rules_from_profile_with_params_and_custom_kinds(seeded_store):

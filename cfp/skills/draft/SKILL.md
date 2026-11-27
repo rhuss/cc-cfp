@@ -177,22 +177,25 @@ From the `count` output, for every id in `over` (and the bio when its status is 
 python3 -I "$PLUGIN_ROOT/scripts/cfp_store.py" preflight --proposal <id> --today <today>
 ```
 
-`passed` is the rule verdict; the top-level `ok` only says the call succeeded.
+`passed` is the rule verdict; the top-level `ok` only says the call succeeded. `manual` lists the rules the CLI cannot compute, each with its `severity`, `params`, `text`, and `source`.
 
-Audience level (FR-029): compare the abstract against the stored `audience_level` yourself. Advanced terminology (internals, custom controllers, kernel paths, scheduler algorithms) under Beginner, or a definitions-first walkthrough under Advanced, is a mismatch. When they disagree, write `{"rule": "audience-level", "severity": "warn", "text": "<short reason>"}` to `<scratchpad>/cfp-finding.json` and run:
+Then make the two checks that need judgement. Read `$PLUGIN_ROOT/skills/_shared/preflight-checks.md` and follow it: the audience level comparison (FR-029) against the levels this profile's form offers, and every rule of kind `custom` in `manual`, judged against the proposal. Use the `count` result from Step 8 or 9, and run `count` again when a field changed since. Each finding is written to `<scratchpad>/cfp-finding.json` and recorded with:
 
 ```bash
 python3 -I "$PLUGIN_ROOT/scripts/cfp_store.py" preflight add-finding --proposal <id> --from-json <scratchpad>/cfp-finding.json
 ```
 
-Show every finding with its severity (`disqualify` or `warn`), text, and `source`, then the `manual` rules the committee covers (vendor pitch and custom rules), then any `problems` (proposal files that could not be read; the submission count may be low). Then handle:
+A violated custom rule takes its severity from the profile, so a `disqualify` rule blocks `ready` like a computed one. Every `preflight` run drops these findings; make both checks again after each re-run.
+
+Show every finding with its severity (`disqualify` or `warn`), text, and `source`, then one line per custom rule with its verdict, then the `vendor_pitch` rules the committee review covers, then any `problems` (proposal files that could not be read; the submission count may be low). Then handle:
 
 - Track finding: show the event's track list and let the user pick; save with `proposal set-field --field track --text-file <file>` (this also updates the front matter), then re-run `preflight`.
 - Repeat warning: ask whether the `previously_presented` text explains significant differences; offer to rewrite that field when it does not, then re-run.
 - Audience level warning: offer to change the level (`proposal set-field --field audience_level`) or the abstract, then re-run.
+- Violated custom rule: explain the rule. When a field causes it (a style rule, a required field that is still empty), offer to rewrite or draft that field, then re-run. Otherwise say what would resolve it outside this field set.
+- Other disqualifying findings (submission limit, speaker count, panel rules): explain the rule and what would resolve it; these need changes outside this field set.
 
 Any `set-field`, `set-bio-text`, or `set-meta` call on a proposal that is already `ready` moves it back to `draft` (the result carries `reset_to_draft: true`); say so and continue with the review and pre-flight again.
-- Other disqualifying findings (submission limit, speaker count, panel rules): explain the rule and what would resolve it; these need changes outside this field set.
 
 ## Step 11: Ready
 
