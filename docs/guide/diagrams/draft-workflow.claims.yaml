@@ -37,7 +37,7 @@ claims:
   - id: step-4b
     kind: label
     elements: [s4b]
-    text: Step 4b creates the proposal with proposal create (no question to the user unless one already exists).
+    text: Step 4b creates the proposal with proposal create, without a question; when a proposal for the talk and event already exists, the flow resumes it.
     sources:
       - "cfp:cfp/skills/draft/SKILL.md:86-92"
   - id: step-5
