@@ -80,13 +80,13 @@ Every field is required except `resources`.
 `resources` is free text, matching the live form, and its guidance asks for speaker evidence: recordings of previous talks for every speaker, project links, books, and websites.
 `cncf_oss_projects` is a single field for the CNCF projects and any other open source projects the session discusses.
 
-The speaker bio isn't a form field.
+The speaker bio isn't one of the profile's `fields`.
 The profile sets `bio_limit` to 500 with `bio_limit_status: screenshot`.
 It doesn't set `bio_on_form`, so the default `true` applies and cfp treats the form as asking for a bio.
 
 === Which limits a screenshot confirmed
 
-The profile's limits come from a screenshot of the KubeCon EU 2027 Sessionize form, recorded as `screenshot:sessionize-kubecon-eu-2027-2026-10-11`.
+The confirmed limits come from a screenshot of the KubeCon EU 2027 Sessionize form, recorded as `screenshot:sessionize-kubecon-eu-2027-2026-10-11`.
 Its drafting guidance lists what that form showed on 2026-10-11:
 
 * The Description (`abstract`) has a hard limit of 1000 characters.
@@ -135,8 +135,8 @@ The pre-flight computes six of them from your store:
 [cols="2,3,4",options="header"]
 |===
 | Rule | What the conference says | What the pre-flight checks
-| `submission-limit` | A speaker may be on at most 3 proposals per event in any format; exceeding it may remove all of them from review. | How many of your proposals for the event are `submitted`, `accepted`, `rejected`, or `presented`. When that reaches 3 (or the event's own limit), the rule fails.
-| `repeat-one-year` | Talks presented at a CNCF or LF event within the past year aren't selected unless the submission explains significant differences. | Whether the talk has an outing for the `kubecon` profile in the last 12 months. When `previously_presented` explains the differences, the finding drops to `warn`.
+| `submission-limit` | A speaker may be on at most 3 proposals per event in any format; exceeding it may remove all of them from review. | How many of your other proposals for the event are `submitted`, `accepted`, `rejected`, or `presented`. When that already reaches 3 (or the event's own limit), submitting this one would exceed it and the rule fails.
+| `repeat-one-year` | Talks presented at a CNCF or LF event within the past year aren't selected unless the submission explains significant differences. | Whether the talk has an outing (a recorded presentation of it) for the `kubecon` profile in the last 12 months. When `previously_presented` has text, the finding drops to `warn`.
 | `track-in-event` | The chosen track must be one of the event's tracks. | Whether the proposal's track is on the event's list, ignoring case. No track at all fails too.
 | `speaker-count` | The number of speakers must fit the session format. | Whether you plus your co-speakers fit the session type's minimum and maximum.
 | `all-men-panel` | No session with three or more speakers who all identify as men; applies to panels and tutorials. | For proposals with three or more speakers, whether all are men. When some genders are unknown and the rest are men, the finding is a `warn`.
@@ -248,8 +248,8 @@ xref:profiles/refresh.adoc[Refresh a profile and update shipped ones] walks you 
 
 == Confirm the limits with screenshots
 
-The live Sessionize form sits behind a login, so cfp can't fetch it.
-The title limit is still `unverified`, and a new edition can change any limit.
+The live Sessionize form sits behind a login, so the limits are confirmed with screenshots.
+The title limit is still `unverified`.
 Screenshots of the form fix both.
 
 . Open the edition's Sessionize form in your browser and take a screenshot of each page.
