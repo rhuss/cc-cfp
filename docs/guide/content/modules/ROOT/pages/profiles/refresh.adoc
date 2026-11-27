@@ -1,5 +1,270 @@
 = Refresh a profile and update shipped ones
-:guide-no-sources:
 
-// STUB
-This page is written by a later task of the guide plan.
+// Sources:
+// cfp:README.md:25,27,38,50-51,65,68,71
+// cfp:cfp/skills/profile/SKILL.md:3,10,19,23,25-27,93,97,99,101-103,105-115,119
+// cfp:cfp/scripts/cfplib/profile.py:361-373
+// cfp:cfp/knowledge-base/profiles/kubecon/profile.md:6
+// cfp:cfp/knowledge-base/profiles/kubecon/events/kubecon-eu-2027.md:9
+// cfp:cfp/scripts/cfplib/config.py:117-129,152-158
+// cfp:cfp/skills/init/SKILL.md:16-21,54,58-99,107
+// cfp:cfp/scripts/cfplib/seeds.py:1-10,16-17,29-43,46-66,69-86,89-128,131-193
+// cfp:cfp/scripts/cfp_store.py:123-133
+
+A profile you approved once doesn't stay right forever.
+Two things make it go stale.
+Each new edition of a conference brings its own dates, tracks, and submission limit, and those live in the event for that edition.
+And a later version of the plugin can ship a newer copy of the KubeCon + CloudNativeCon profile, while your store still holds the copy it got at setup.
+
+This page covers both.
+`/cfp:profile refresh` researches a new edition and writes its event.
+`/cfp:init` takes in a newer shipped profile after a plugin update.
+The terms profile, event, verification label, and approval are explained in xref:profiles/index.adoc[How profiles work].
+
+== A new edition with /cfp:profile refresh
+
+A refresh works on a profile you already have.
+It researches one edition and writes that edition's event, the override that holds what changes from year to year.
+The profile that holds what's true for every edition of the conference is the family profile, and a refresh changes it only when you say so.
+
+=== The command and its arguments
+
+[source,text]
+----
+/cfp:profile refresh <profile-id> [--event <id or URL>] [--screenshots <path,...>]
+----
+
+`<profile-id>`:: The profile to refresh, for example `kubecon`.
+If cfp can't load it, it shows the error and stops.
+`--event <id or URL>`:: The edition: an existing event id, a new id, or the URL of the edition's CFP page.
+Without it, cfp asks which edition you mean.
+It lists the profile's events plus a "New edition" choice, where you type a name or a URL.
+`--screenshots <path,...>`:: A comma-separated list of screenshots of the submission form.
+Images you paste into the conversation count too.
+For a pasted image without a file name, cfp asks you for a label such as `pasted-1`.
+
+=== What cfp researches
+
+Before it starts, cfp reads the research checklist that ships with the plugin, and it follows that checklist.
+Then it fetches the edition's CFP page: the URL you gave, a source listed in the profile, or the result of a web search for the profile name, the edition, and "CFP".
+The fetch limits are the same as for a new profile, and xref:profiles/new.adoc[Research a new conference] lists them.
+
+From the CFP page, cfp takes what belongs to the event:
+
+* the name, the location, and the event dates
+* the CFP open and close dates with the timezone, and the notification date
+* the tracks, as exact strings
+* the submission limit
+* session type variations, such as a different tutorial length, as `session_type_overrides`
+* the sources it used
+
+Anything that would change the family profile, like a new field, a changed limit, or a new or changed rule, cfp notes separately.
+
+From each screenshot, cfp reads the field labels, their order, the required markers, the option lists, and the character limits.
+Every field a screenshot confirms gets `limit_status: "screenshot"` and `screenshot:<file name>` as its source.
+When a screenshot and a public page disagree, the screenshot wins, and cfp records the conflict.
+
+=== Approval, one section at a time
+
+`cfp` writes the event into your store right away, but with its approval off (`"approved": false`).
+Then it shows you the event's sections one at a time, each value with its verification label:
+
+* tracks and dates
+* session type variations and the submission limit
+* field overrides, when you gave screenshots
+
+For each section you answer approve, edit, or re-research.
+After an edit or a re-research, cfp writes the event again, still unapproved.
+Only once you've approved every section does cfp switch the event's approval on.
+
+=== Changes to the family profile
+
+`cfp` never changes the family profile silently.
+It shows every suggested family change as a list, such as a field added, a limit changed from one value to another, or a rule added, each with its label.
+Then it asks one question with three answers:
+
+apply to the family profile:: `cfp` writes the profile with the change and validates it.
+It approves the profile after you confirm the validated result.
+keep for this edition only:: The changed fields go into the event, as `field_overrides` or `session_type_overrides`.
+discard:: `cfp` mentions the change in its final summary and moves on.
+
+Limits a screenshot confirms are family profile fields, so they go through this same question.
+
+The conflict between a screenshot and a page is recorded as part of that question too.
+`cfp` appends a line in this form to the profile's Notes section:
+
+[source,text]
+----
+<field>: screenshot <file> shows <value>, page <url> shows <other value>; screenshot used (<today>)
+----
+
+It writes the existing notes back together with the new line, so nothing already in the section is lost.
+
+=== Refresh an edition
+
+Run a refresh for a new edition of a conference you already have a profile for, or to confirm a profile's limits with screenshots of the form.
+The example uses `kubecon-eu-2027` as a practice edition.
+Its CFP closed on 2026-10-11, so treat this run as practice and use the id or CFP page URL of the edition you're targeting.
+
+. If you can open the edition's submission form, take a screenshot of each page and save them, for example as `~/Desktop/form-1.png` and `~/Desktop/form-2.png`.
+Skip this step when you can't get at the form.
+
+. In Claude Code, start the refresh:
++
+[source,text]
+----
+/cfp:profile refresh kubecon --event kubecon-eu-2027 --screenshots ~/Desktop/form-1.png,~/Desktop/form-2.png
+----
++
+Leave out `--screenshots` when you skipped the first step.
++
+Check: cfp shows the first section, tracks and dates, with a verification label on each value, and asks approve, edit, or re-research.
+
+. Go through the sections.
+For each one, pick approve, edit, or re-research.
++
+Check: when the research found changes for the family profile, cfp lists them and asks whether to apply them to the family profile, keep them for this edition only, or discard them.
+
+. Answer the family profile question, if cfp asks it.
+With apply, confirm the validated profile when cfp shows it to you.
+
+. Read the report.
+`cfp` validates the profile and the event and fixes any problems it finds.
++
+Check: cfp prints the path of the event file, the approval status of the profile and of the event, and the event as `/cfp:profile show` renders it.
+The event's approval is on.
+
+xref:profiles/kubecon.adoc[The shipped KubeCon profile] shows which KubeCon limits are confirmed by screenshots and which are still `unverified`.
+
+== After a plugin update with /cfp:init
+
+=== Why your store has its own copy
+
+On the first run, `/cfp:init` copies every shipped profile that your store doesn't have yet, marks the copy approved, and keeps the `seed_version` from the shipped `profile.md`.
+It never overwrites a profile that's already there.
+
+A later plugin version can ship a newer profile, marked by a higher `seed_version`.
+At this guide's baseline, the shipped KubeCon profile has `seed_version` `2026-10-11`.
+If an older cfp set up your store with a KubeCon profile that has an earlier `seed_version`, your copy is outdated, and `/cfp:init` offers to update it.
+That's why you run `/cfp:init` again after a plugin update.
+
+=== What /cfp:init checks
+
+On every run, also when you keep the store as it is, `/cfp:init` compares each shipped profile with your store's copy by their `seed_version`.
+It finds one of these states for each shipped profile:
+
+[cols="1,3"]
+|===
+|State |Meaning and what cfp says
+
+|`current`
+|Your copy has the same `seed_version` as the shipped profile, or the shipped profile has none.
+`cfp` says nothing.
+
+|`missing`
+|Your store doesn't have the profile.
+`cfp` says nothing about it here; the setup step is the one that copies missing profiles.
+
+|`local`
+|Your copy has no `seed_version`, so it was researched or written by hand.
+`cfp` says nothing and never replaces it.
+
+|`newer`
+|Your copy comes from a newer plugin version than the installed one.
+`cfp` says so in one line.
+
+|`unreadable`
+|The front matter of your copy is broken.
+`cfp` shows the error once.
+
+|`outdated`
+|The shipped `seed_version` is higher than yours.
+`cfp` offers the update, one profile at a time.
+|===
+
+Behind this, cfp runs two commands of its store CLI: `profile seed-status` for the states and the diffs, and `profile seed-update` for the update itself.
+
+=== How to read the diff
+
+For an outdated profile, cfp first names both versions, from your copy's `seed_version` to the shipped one.
+Then it goes through the files the shipped profile has: `profile.md` and the files under `events/` and `examples/`.
+Each file gets one of three states:
+
+`same`:: No difference. `cfp` doesn't mention it.
+`changed`:: `cfp` prints the path and then the full diff.
+`missing`:: A shipped file your store doesn't have. `cfp` lists these after the diffs.
+
+In a diff, lines starting with `-` are in your store now and would be replaced.
+Lines starting with `+` come with the shipped file.
+The header names the two sides `store/<path>` and `shipped/<path>`, and each change has two lines of context around it.
+
+Before comparing, cfp brings both files into the form the store writes and drops their approval flags.
+That keeps differences in quoting, comments, and approval out of the diff, so only real differences show up.
+When cfp can't read a file in your store, it lists that file as changed and shows `(the store file cannot be read: <error>)` in place of the diff.
+
+=== What an update replaces and what it keeps
+
+Here's what to know before you pick an answer:
+
+* An update replaces whole files.
+Hand edits in a replaced file are lost, which is why the diff comes first.
+* `profile.md` is always replaced, because it carries the version.
+* The approval of the profile and of every replaced event stays as it was.
+When the replaced file's front matter can't be read, the new file comes in unapproved.
+* Files that only your store has, such as events you added and examples of your accepted proposals, are never touched.
+
+=== Take in a newer shipped profile
+
+Your store keeps its copy of a shipped profile until you take in the newer one.
+You see every change before anything is replaced, and you decide which files to take.
+
+. In Claude Code, run:
++
+[source,text]
+----
+/cfp:init
+----
+
+. `cfp` shows your current store path and asks what to do with it.
+Choose `keep it as it is`.
+xref:overview/install.adoc[Install and first run] explains the other two choices.
++
+Check: when your copy is outdated, cfp says that the shipped `kubecon` profile is newer than the copy in your store, with both versions, for example from an earlier date to `2026-10-11`.
+The diffs of the changed files and the list of missing files follow.
+When no shipped profile is `outdated`, `newer`, or `unreadable`, cfp doesn't bring up shipped profiles at this point.
+
+. Read the diffs.
+Look at the `-` lines in particular: whatever you edited by hand in a changed file is lost when you take that file.
+
+. Pick one of the three answers cfp offers:
++
+--
+`update everything shown`::: Takes `profile.md` and every changed or missing file.
+`cfp` offers this answer only when a file other than `profile.md` is changed or missing.
+`update the profile only`::: Replaces `profile.md`, and the other files stay as they are.
+`skip`::: Nothing changes.
+--
++
+When you want only some of the files, tell cfp which ones.
+It takes `profile.md` plus the files you named.
++
+Check: after an update, cfp reports the files it updated, added, and skipped, validates the profile, and shows the problems when there are any.
+Its closing summary lists the update with the versions.
+
+. Look at the version in your store's copy.
+Replace `~/cfp-store` with your store path.
++
+Check: the `seed_version` line shows the shipped version, `2026-10-11`.
++
+[source,bash]
+----
+grep seed_version ~/cfp-store/profiles/kubecon/profile.md
+----
+// expect: contains "2026-10-11"
+
+=== What happens to skipped files
+
+After `update the profile only`, your copy counts as current, and cfp doesn't offer the skipped files again.
+Their shipped versions stay readable in the plugin's own `knowledge-base/profiles/<profile>/` folder.
+
+After `skip`, your copy stays as it is, and the next `/cfp:init` run offers the update again.

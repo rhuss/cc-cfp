@@ -137,3 +137,13 @@ rules:
       - 'bio_on_form'
       - '^Check:'
       - '/cfp:profile show'
+  - glob: "content/modules/ROOT/pages/profiles/refresh.adoc"
+    require:
+      - '/cfp:profile refresh'
+      - '/cfp:init'
+      - 'seed_version'
+      - 'outdated'
+      - '(?i)approval'
+      - 'update everything shown'
+      - 'profile only'
+      - '--screenshots'
