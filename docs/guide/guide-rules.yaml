@@ -27,3 +27,17 @@ rules:
       - '^== Ways to start'
       - '^== Status and limits'
       - '^== Where to go next'
+  - glob: "content/modules/ROOT/pages/overview/install.adoc"
+    require:
+      - '^Check:'
+      - '// expect:'
+      - 'make install'
+      - '/cfp:init'
+      - 'CFP_STORE'
+      - 'Python 3\.10'
+      - 'xref:profiles/refresh\.adoc'
+      - 'xref:user/draft\.adoc'
+    require_order:
+      - 'git clone'
+      - 'make install'
+      - '/cfp:init'

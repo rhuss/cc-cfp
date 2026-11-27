@@ -1,5 +1,201 @@
 = Install and first run
-:guide-no-sources:
 
-// STUB
-This page is written by a later task of the guide plan.
+// Sources:
+// cfp:README.md:7-17,25,27,29,45
+// cfp:Makefile:3-4,11-22
+// cfp:cfp/skills/init/SKILL.md:14-41,43-56,101-111
+// cfp:cfp/scripts/cfplib/config.py:15-22,39-45,48-55,132-169
+// cfp:cfp/skills/_shared/preamble.md:7-16,19-20
+// cfp:cfp/scripts/cfp_store.py:69,287-291
+// cfp:cfp/hooks/scripts/context-hook.py:26-29
+// prose:README.md:74-82
+// url:https://code.claude.com/docs/en/plugins/install.md
+
+Two things stand between you and your first proposal.
+`cfp` has to be installed in Claude Code, and it needs a store, the folder where it keeps your talks, proposals, bios, and conference profiles.
+This page takes care of both.
+If you haven't met cfp yet, xref:index.adoc[What cfp does] gives you the big picture first.
+
+== What you need
+
+* Claude Code with plugin support.
+* Python 3.10 or newer on your `PATH`.
+
+You don't need a virtual environment, because cfp's scripts use only Python's standard library and run with `python3 -I`.
+
+== Install cfp
+
+You install cfp from a local clone of its repository.
+In Claude Code's terms, a marketplace is a catalog of plugins, and Claude Code has to know about a marketplace before you can install from it.
+The cc-cfp repository is its own marketplace, called `cc-cfp-marketplace`, and one `make` target registers it and installs the plugin.
+
+. Clone the repository and install the plugin:
++
+[source,bash,subs="attributes+"]
+----
+git clone {cfp-repo}.git
+cd cc-cfp
+make install
+----
++
+Here's what `make install` does.
+It adds your clone to Claude Code as the marketplace `cc-cfp-marketplace`, or updates that marketplace when it's already there.
+If cfp is already installed, it removes it first.
+Then it runs `claude plugin install cfp@cc-cfp-marketplace`.
+Installed from the shell like this, a plugin gets user scope by default, which means it's enabled for you in every project on this machine.
++
+Check: Claude Code's plugin list includes cfp.
++
+[source,bash]
+----
+claude plugin list
+----
+// expect: contains "cfp@cc-cfp-marketplace"
+
+. Start Claude Code with `claude`.
+A plugin you install from your shell loads the next time you start Claude Code.
+Already have a session open?
+Run `/reload-plugins` in it instead.
++
+Check: when you type `/` in Claude Code, the list shows cfp's commands in the form `/cfp:<name>`, for example `/cfp:init` and `/cfp:draft`.
+
+=== Optional: cc-prose for the voice pass
+
+`cfp` runs the cc-prose humanizer in a step called the voice pass (xref:index.adoc[What cfp does] explains both).
+Without cc-prose, cfp skips the voice pass and tells you so.
+If you want it, cc-prose installs the same way as cfp: clone {prose-repo}[its repository] and run `make install` there.
+
+== Set up your store
+
+`cfp` keeps everything it writes in your store, so the store comes next.
+`/cfp:init` sets it up and copies the KubeCon + CloudNativeCon profile into it, so you can start drafting right after.
+If you run a different `/cfp:` command first, cfp tells you the store isn't set up yet and offers to run `/cfp:init` for you.
+
+. In Claude Code, run:
++
+[source,text]
+----
+/cfp:init
+----
+
+. Answer its questions.
+It asks them one at a time:
++
+* *Where should the store live?*
+If `~/Obsidian` holds exactly one vault, the default is `~/Obsidian/<vault>/Talks`.
+With several vaults, you get the `Talks` folder of each one as a choice.
+Without `~/Obsidian`, the default is `~/cfp-store`.
+"Other" lets you type any path.
+* *Your name.*
+It's required, and cfp uses it in third-person bios and in drafts.
+* *Your company or affiliation.*
+It's optional.
+`cfp` uses it in bios and for any conference rule that compares speaker affiliations.
+* *A voice profile.*
+If you have named cc-prose voice profiles, cfp offers them, plus "None (humanize only)".
+If it finds none, it says so, and the voice pass runs the humanizer without a named voice.
+* *Review rounds.*
+This is the maximum number of committee review rounds before the review loop stops: 3 by default, anything from 1 to 10.
+
++
+Check: `/cfp:init` ends with a short summary that lists the store path, the seeded profiles, your name, company, voice profile, and review rounds, and the commands to try next: `/cfp:draft`, `/cfp:bio new`, and `/cfp:profile list`.
+
+== What /cfp:init creates
+
+In the store folder, `/cfp:init` creates:
+
+* the folders `profiles/`, `talks/`, `proposals/`, `bios/`, and `resources/`;
+* `config.md`, with your name, company, voice profile, review rounds, and default profile;
+* a copy of the shipped KubeCon + CloudNativeCon profile under `profiles/`, marked as approved so drafting works right away, and set as your default profile.
+
+Outside the store, it writes `~/.config/cc-cfp/config.json`, which holds the store path.
+
+Every file in the store is plain markdown and renders in Obsidian.
+xref:internals/store.adoc[Store files] describes what each file holds.
+
+Want to see the result from your shell?
+The store CLI ships in the clone, so you can ask it directly.
+
+Check: in your cc-cfp clone, the store CLI prints one line of JSON with your store path and `"exists": true`.
+
+[source,bash]
+----
+python3 -I cfp/scripts/cfp_store.py config show
+----
+// expect: matches /"exists": true/
+
+== Running /cfp:init again
+
+Once the store exists, `/cfp:init` shows you its current path and asks what you want:
+
+* `keep it as it is` changes no settings and goes straight to checking the shipped profiles;
+* `re-run setup on it` asks the setup questions again to update your answers, and all your data is kept;
+* `use a different path` asks for a new path and runs the setup there.
+
+Run `/cfp:init` again after every plugin update, too.
+Your store keeps its own copy of the shipped profile.
+When the shipped one is newer, `/cfp:init` shows you the differences and offers to update your copy.
+xref:profiles/refresh.adoc[Refresh a profile and update shipped ones] walks through that update.
+
+Running `make install` again in your clone updates the marketplace and reinstalls the plugin.
+
+== A second store with CFP_STORE
+
+`cfp` looks for the store in this order: `--store <path>` on a store CLI call, then the `CFP_STORE` environment variable, then `~/.config/cc-cfp/config.json`.
+`CFP_STORE` points a session at a second store without rewriting the config file, and cfp's prompt hook honours it too.
+
+. Set up the second store in Claude Code, giving its path right away:
++
+[source,text]
+----
+/cfp:init --store ~/cfp-store-2
+----
++
+With `--store`, `/cfp:init` takes that path without asking for one, then asks the remaining questions.
++
+[WARNING]
+====
+Setting up a store writes its path to `~/.config/cc-cfp/config.json`.
+After this step, every session without `CFP_STORE` uses the second store.
+To make your first store the default again, run `/cfp:init` in such a session, choose `use a different path`, and enter your first store's path.
+It asks the setup questions again.
+====
+
+. Start a session on the second store from your shell:
++
+[source,bash]
+----
+CFP_STORE=~/cfp-store-2 claude
+----
++
+Check: `/cfp:init` in that session shows `cfp-store-2` as the current store path.
+Choose `keep it as it is` to leave it unchanged.
++
+From your shell, in your cc-cfp clone, the store CLI finds the second store through the same variable.
++
+Check: the JSON line shows the `cfp-store-2` path and `"exists": true`.
++
+[source,bash]
+----
+CFP_STORE=~/cfp-store-2 python3 -I cfp/scripts/cfp_store.py config show
+----
+// expect: matches /cfp-store-2/ and matches /"exists": true/
+
+== When cfp's commands do nothing
+
+There are two ways this shows up.
+
+The `/cfp:` commands don't appear when you type `/`::
+A plugin you install from your shell loads the next time you start Claude Code, or when you run `/reload-plugins` in an open session.
+Do one of the two.
+If `claude plugin list` in your shell doesn't show `cfp@cc-cfp-marketplace`, run `make install` again in your clone.
+
+A `/cfp:` command says the plugin seems not to be installed correctly, and stops::
+Every `/cfp:` prompt normally gets a block of context from cfp's prompt hook: the plugin's location, your store path, whether the store is set up, and today's date.
+When that block is missing, the hook didn't fire, and the command stops with this message.
+Run `make install` again in your clone.
+
+== Next steps
+
+* xref:user/draft.adoc[Draft a proposal] takes you from a talk idea to a filled-in conference form.
+* After a plugin update, xref:profiles/refresh.adoc[Refresh a profile and update shipped ones] explains how the shipped profile in your store gets updated.
