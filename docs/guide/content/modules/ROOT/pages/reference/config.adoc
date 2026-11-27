@@ -5,10 +5,10 @@
 // cfp:README.md:25,29,61
 // cfp:cfp/scripts/cfp_store.py:93-105,287-309
 // cfp:cfp/scripts/cfplib/preflight.py:157-175,178-181
-// cfp:cfp/skills/draft/SKILL.md:22,36,143-145,155
+// cfp:cfp/skills/draft/SKILL.md:22,36,143-145,155,222
 // cfp:cfp/skills/bio/SKILL.md:43-45
 // cfp:cfp/skills/committee-review/SKILL.md:81
-// cfp:cfp/scripts/cfplib/proposals.py:7,12-36,79-105,275,300,375
+// cfp:cfp/scripts/cfplib/proposals.py:7,12-36,74-75,79-105,275,300,313-377
 // cfp:cfp/scripts/cfplib/lifecycle.py:10-29,32-36,39-55,58-74,90-137,140-179
 // cfp:cfp/skills/status/SKILL.md:39-47,54-61
 
@@ -94,11 +94,11 @@ It is read as an integer; a value that does not parse as one falls back to 3.
 |empty
 |The profile `/cfp:draft` offers first.
 `/cfp:bio` reads its bio limit to suggest a bio length.
-When it is empty during setup, `/cfp:init` sets it to the first profile folder in alphabetical order.
+When it is empty during setup, `/cfp:init` sets it to the first profile folder (one with a `profile.md`) in sort order.
 
 |`speaker_gender`
 |not set
-|Optional; `/cfp:init` never asks for it, so you add it by hand.
+|Optional; `/cfp:init` never asks for it, so you add it by hand or with `config set`.
 The rule for line-ups in which every speaker is a man puts it first in the list of speaker genders, followed by the proposal's `co_speaker_genders`.
 Without it, a line-up that the rule covers gets a `warn` finding about unknown genders, unless a co-speaker's gender is known and is not a man.
 xref:internals/rules.adoc#line-ups-in-which-every-speaker-is-a-man[How rules and verdicts are computed] explains the rule.
@@ -189,7 +189,7 @@ A move to `draft` writes no date.
 A move to `ready` passes only when all of these hold:
 
 * the last committee review verdict is `pass`;
-* `review_stale` is not set, that is, the proposal was not edited after that review;
+* `review_stale` is not set (a move or demotion to `draft` after the review sets it; edits to a `draft` proposal, such as the voice pass, do not);
 * a pre-flight result exists and it reported no disqualifying findings.
 
 With `--force`, `ready` is set without these checks, and the result says so in its side effects.
@@ -213,7 +213,7 @@ It holds the proposal's title, abstract, and the text of the profile's reviewer-
 When the proposal has review rounds, it sets `review_stale`.
 
 |Content edit of a `ready` proposal
-|A field text, bio, or settings change moves the proposal back to `draft` with the same effects as a move to `draft`.
+|A field text, bio, or proposal meta change (track, session type, co-speakers, and similar) moves the proposal back to `draft` with the same effects as a move to `draft`.
 A content edit of a `draft` proposal does not change its status.
 |===
 
@@ -255,7 +255,7 @@ xref:internals/rules.adoc#submission-limit[How rules and verdicts are computed] 
 
 |`updated`
 |empty
-|Set to today by every status move.
+|Set to today by every write to the proposal.
 
 |`review_rounds`
 |`[]`

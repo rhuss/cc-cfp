@@ -57,8 +57,8 @@ claims:
     kind: label
     elements: [n_guard]
     text: >-
-      draft to ready needs a last committee review verdict of pass, no edit after that review
-      (review_stale), and a pre-flight that ran without disqualifying findings; with --force,
+      draft to ready needs a last committee review verdict of pass, a review that is not stale
+      (review_stale, set by a move or demotion to draft after the review), and a pre-flight that ran without disqualifying findings; with --force,
       ready is set without these checks.
     sources:
       - "cfp:cfp/scripts/cfplib/lifecycle.py:39-55,152-159"
