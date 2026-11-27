@@ -319,3 +319,5 @@ notes: ""
 ```
 
 Environment variable `CFP_STORE` overrides the file when set.
+
+> **Note**: Superseded by feature 002: the default store is `<data folder>/store` and the config folder follows XDG; see specs/002-xdg-config-store/spec.md. The file lives in the config folder (`CFP_CONFIG_DIR`, `$XDG_CONFIG_HOME/cc-cfp`, or `~/.config/cc-cfp`); the example path is one choice the user can make at init.

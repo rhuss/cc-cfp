@@ -3,17 +3,21 @@ claims:
   - id: user-config
     kind: label
     elements: [ucfg]
-    text: "The user config ~/.config/cc-cfp/config.json holds {\"store\": path}, the path of the store."
+    text: >-
+      The user config ~/.config/cc-cfp/config.json (its default location; CFP_CONFIG_DIR or
+      XDG_CONFIG_HOME move it) holds {"store": path}, the path of the store.
     sources:
-      - "cfp:cfp/scripts/cfplib/config.py:3,26-45"
+      - "cfp:cfp/scripts/cfplib/config.py"
+      - "cfp:cfp/scripts/cfplib/paths.py"
   - id: user-config-to-store
     kind: connects
     elements: [a_ucfg_store]
     text: >-
       cfp finds the store through the store path in the user config (after --store and the
-      CFP_STORE environment variable, which take precedence).
+      CFP_STORE environment variable, which take precedence); without one, it uses the default
+      store <data folder>/store.
     sources:
-      - "cfp:cfp/scripts/cfplib/config.py:26-55"
+      - "cfp:cfp/scripts/cfplib/paths.py"
   - id: store-frame
     kind: contains
     elements: [fr_store, fr_store_title, config, talk, proposal, bio, resource, fr_prof, a_prop_talk, a_prop_outing, a_prop_event, a_prop_example, a_prop_bio, a_prop_res]

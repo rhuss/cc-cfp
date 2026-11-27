@@ -53,9 +53,11 @@ On later runs, it handles the update of a shipped profile that a newer plugin ve
 |Uses this store path without asking.
 
 |no argument, new store
-|Proposes `~/Obsidian/<vault>/Talks` for an Obsidian vault (one choice per vault when there are several).
-Without `~/Obsidian`, it proposes `~/cfp-store`.
+|Proposes the store that cfp resolves without `--store`, as an absolute path and as the first, recommended choice: `CFP_STORE` when set, else the store in the config file, else `<data folder>/store` (by default `~/.local/share/cc-cfp/store`).
+An Obsidian vault is never the default.
+When `~/Obsidian/<vault>` folders exist, the `Talks` folders of up to three vaults, sorted by name, are further choices.
 "Other" takes a path as free text.
+xref:reference/config.adoc#store-resolution[Configuration] lists the resolution order and both folders.
 
 |`keep it as it is`
 |On an initialized store: no setting changes; goes on to the check of the shipped profiles.

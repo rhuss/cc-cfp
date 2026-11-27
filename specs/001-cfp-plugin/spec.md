@@ -10,6 +10,8 @@
 
 **Input**: User description: "Build a Claude Code plugin ("cfp") that drafts conference talk proposals (CFP submissions) and speaker bios interactively, using reusable conference profiles. Talk-centric workflow: conference profile (family + per-event overrides), talk (conference-independent story), proposal (talk rendered for one profile and event, field by field, with lifecycle status), bio variations, speaker resources. Store is markdown in a configurable Obsidian vault folder. Commands: profile research/create/refresh, bio management, interactive proposal drafting with simulated program committee review, prose voice pass, pre-flight rule check and paste view, status update. Ships with a KubeCon seed profile. No auto-submission. Solo speaker focus."
 
+> **Note**: Superseded by feature 002: the default store is `<data folder>/store` and the config folder follows XDG; see specs/002-xdg-config-store/spec.md.
+
 Source documents: `brainstorm/01-cfp-plugin.md` (decision and key requirements) and `brainstorm/research/kubecon-cfp-research.md` (KubeCon formats, fields, rubric, rules).
 
 ## Clarifications
@@ -140,7 +142,7 @@ Before pasting a proposal into the submission site, the speaker runs the pre-fli
 
 **Store and configuration**
 
-- **FR-001**: The plugin MUST keep all data (profiles, talks, proposals, bios, resources, store configuration) as plain markdown files with structured front matter in a user-configurable folder, defaulting to a folder inside the user's Obsidian vault.
+- **FR-001**: The plugin MUST keep all data (profiles, talks, proposals, bios, resources, store configuration) as plain markdown files with structured front matter in a user-configurable folder, defaulting to a folder inside the user's Obsidian vault. (Superseded by feature 002: the default store is `<data folder>/store` and the config folder follows XDG; see specs/002-xdg-config-store/spec.md.)
 - **FR-002**: The plugin MUST work for any speaker without code changes: the speaker's name, voice profile, review round limit, and store path MUST be configuration, not fixed values.
 - **FR-002a**: The store path MUST be kept in a user-level plugin configuration outside the store; the speaker name, voice profile, and review round limit MUST be kept in a configuration file inside the store so they travel with the data.
 - **FR-003**: Every stored file MUST remain readable and editable by hand, and the plugin MUST tolerate manual edits that keep the front matter valid.

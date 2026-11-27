@@ -58,7 +58,8 @@ Every file is plain markdown with YAML front matter, and you can edit it by hand
 image::store-model.svg["Your store: config.md, talks, proposals, bios, and resources in blue, and a profile folder with profile.md, events, and examples in orange; a proposal links to its talk and its event by id, keeps a bio snapshot, references resources by id, and an event overrides its profile; a config file in your home directory holds the store path",role=expand]
 
 Blue marks what's yours, and orange marks the conference side.
-The file `~/.config/cc-cfp/config.json` sits outside the store and tells cfp where the store is.
+The file `config.json` in your config folder (by default `~/.config/cc-cfp/config.json`) sits outside the store and tells cfp where the store is.
+Without it, cfp uses the default store `~/.local/share/cc-cfp/store`; xref:overview/install.adoc#where-cfp-keeps-its-files[Where cfp keeps its files] explains both folders.
 Two arrows in the diagram come from a proposal's status.
 Setting a proposal to `accepted` adds its title, abstract, and the text of its relevance field to its profile as a calibration example.
 Setting it to `presented` records an outing on its talk.

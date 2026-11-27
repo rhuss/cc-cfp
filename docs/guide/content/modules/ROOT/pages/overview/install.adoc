@@ -7,7 +7,10 @@
 // cfp:cfp/scripts/cfplib/config.py:15-22,39-45,48-55,132-169
 // cfp:cfp/skills/_shared/preamble.md:7-16,19-20
 // cfp:cfp/scripts/cfp_store.py:69,287-291
-// cfp:cfp/hooks/scripts/context-hook.py:26-29
+// cfp:cfp/hooks/scripts/context-hook.py
+// cfp:cfp/scripts/cfplib/paths.py
+// cfp:cfp/scripts/cfplib/seeds.py
+// cfp:specs/002-xdg-config-store/spec.md
 // prose:README.md:74-82
 // url:https://code.claude.com/docs/en/plugins/install.md
 
@@ -82,10 +85,10 @@ If you run a different `/cfp:` command first, cfp tells you the store isn't set 
 It asks them one at a time:
 +
 * *Where should the store live?*
-If `~/Obsidian` holds exactly one vault, the default is `~/Obsidian/<vault>/Talks`.
-With several vaults, you get the `Talks` folder of each one as a choice.
-Without `~/Obsidian`, the default is `~/cfp-store`.
-"Other" lets you type any path.
+The default, offered first and shown as a full path, is `~/.local/share/cc-cfp/store`.
+More precisely, it's the store that cfp resolves without `--store`: `CFP_STORE` when set, else the path in your config file, else `<data folder>/store` (see <<where-cfp-keeps-its-files>>).
+If `~/Obsidian` holds vaults, you also get the `Talks` folder of up to three of them, sorted by name, as further choices.
+"Other" lets you type any path, for example the `Talks` folder of another vault.
 * *Your name.*
 It's required, and cfp uses it in third-person bios and in drafts.
 * *Your company or affiliation.*
@@ -98,19 +101,23 @@ If it finds none, it says so, and the voice pass runs the humanizer without a na
 This is the maximum number of committee review rounds before the review loop stops: 3 by default, anything from 1 to 10.
 
 +
-Check: `/cfp:init` ends with a short summary that lists the store path, the seeded profiles, your name, company, voice profile, and review rounds, and the commands to try next: `/cfp:draft`, `/cfp:bio new`, and `/cfp:profile list`.
+Check: `/cfp:init` ends with a short summary that lists the store path, the config file, your personal profiles folder, the seeded profiles, your name, company, voice profile, and review rounds, and the commands to try next: `/cfp:draft`, `/cfp:bio new`, and `/cfp:profile list`.
 
 == What /cfp:init creates
 
-In the store folder, `/cfp:init` creates:
+`/cfp:init` creates the store folder, including any missing parent folders.
+In the store folder, it creates:
 
 * the folders `profiles/`, `talks/`, `proposals/`, `bios/`, and `resources/`;
 * `config.md`, with your name, company, voice profile, review rounds, and default profile;
-* a copy of the shipped KubeCon + CloudNativeCon profile under `profiles/`, marked as approved so drafting works right away, and set as your default profile.
+* a copy of the shipped KubeCon + CloudNativeCon profile under `profiles/`, marked as approved so drafting works right away, and set as your default profile;
+* a copy of each of your personal profiles, also marked as approved.
 
-Outside the store, it writes `~/.config/cc-cfp/config.json`, which holds the store path.
+Outside the store, it writes `config.json` in your config folder (by default `~/.config/cc-cfp/config.json`), which holds the store path.
+It doesn't create the data folder or its `profiles/` folder, unless the store itself goes there.
 
-Every file in the store is plain markdown and renders in Obsidian.
+Every file in the store is plain markdown.
+You can edit it in any editor or open the store as an Obsidian vault.
 xref:internals/store.adoc[Store files] describes what each file holds.
 
 Want to see the result from your shell?
@@ -123,6 +130,52 @@ Check: in your cc-cfp clone, the store CLI prints one line of JSON with your sto
 python3 -I cfp/scripts/cfp_store.py config show
 ----
 // expect: matches /"exists": true/
+
+The same line also names the config file it read (`config_file`), the file the next setup writes (`config_write_path`), the data folder (`data_dir`), your personal profiles folder (`user_profiles_dir`), and where the store path came from (`store_source`: `argument`, `environment`, `config`, or `default`).
+
+[#where-cfp-keeps-its-files]
+== Where cfp keeps its files
+
+`cfp` uses two folders outside the store.
+Both follow the XDG Base Directory layout, and an environment variable can move each of them.
+
+[cols="1,2,2"]
+|===
+|Folder |Location, first match wins |Holds
+
+|Config folder
+|`CFP_CONFIG_DIR`, then `$XDG_CONFIG_HOME/cc-cfp`, then `~/.config/cc-cfp`
+|`config.json` with the store path
+
+|Data folder
+|`CFP_DATA_DIR`, then `$XDG_DATA_HOME/cc-cfp`, then `~/.local/share/cc-cfp`
+|`profiles/` with your personal profiles, and the default `store/`
+|===
+
+`cfp` finds the store in this order: `--store <path>` on a store CLI call, then the `CFP_STORE` environment variable, then the `store` entry in `config.json`, then the default `<data folder>/store`.
+The context hook and the store CLI use the same rules, so they always agree on the store.
+
+These rules apply to the variables:
+
+* `XDG_CONFIG_HOME` and `XDG_DATA_HOME` are ignored when they're empty or not absolute.
+* `CFP_CONFIG_DIR`, `CFP_DATA_DIR`, and `CFP_STORE` count as unset when they're empty.
+A leading `~` is expanded.
+A value that is still relative makes every command that needs it fail with an error that names the variable, for example `CFP_STORE must be an absolute path, got 'talks'`.
+* When `CFP_CONFIG_DIR` isn't set and the config folder holds no `config.json`, cfp reads `~/.config/cc-cfp/config.json`, the location of earlier versions.
+Setup always writes to the config folder.
+
+=== Personal conference profiles
+
+Conference profiles that cfp doesn't ship go into `<data folder>/profiles/<id>/`, in the same format as the shipped profile: a folder with `profile.md` and optional `events/` and `examples/` folders.
+A folder without `profile.md` is skipped.
+`/cfp:init` copies your profiles into a new store next to the shipped ones, and its update check compares the store copy with your profile.
+`cfp` never creates this folder, so create it yourself when you need it.
+
+* `seed_version` in `profile.md` is an ISO date (`YYYY-MM-DD`).
+Raise it when you change your profile, and the next `/cfp:init` run offers the update.
+* A profile without `seed_version` is copied once, and its store copy is never offered an update.
+* A personal profile with the name of a shipped one replaces the shipped one, and cfp warns about it.
+To have your variant offered over an existing store copy of the shipped profile, give it a later `seed_version` than the shipped one.
 
 == Running /cfp:init again
 
@@ -139,8 +192,8 @@ xref:profiles/refresh.adoc[Refresh a profile and update shipped ones] walks thro
 
 == A second store with CFP_STORE
 
-`cfp` looks for the store in this order: `--store <path>` on a store CLI call, then the `CFP_STORE` environment variable, then `~/.config/cc-cfp/config.json`.
-`CFP_STORE` points a session at a second store without rewriting the config file, and cfp's prompt hook honours it too.
+`CFP_STORE` comes before the config file in the store order (see <<where-cfp-keeps-its-files>>).
+It points a session at a second store without rewriting the config file, and cfp's prompt hook honours it too.
 
 . Set up the second store in Claude Code, giving its path right away:
 +
@@ -153,12 +206,12 @@ With `--store`, `/cfp:init` takes that path without asking for one.
 +
 [WARNING]
 ====
-Setting up a store writes its path to `~/.config/cc-cfp/config.json`, so the second store is now your default.
+Setting up a store writes its path to `config.json` in your config folder, so the second store is now your default.
 The next step makes your first store the default again.
 ====
 
 . Start Claude Code without `CFP_STORE`, run `/cfp:init`, choose `use a different path`, and enter your first store's path.
-`/cfp:init` asks the setup questions again and writes that path back to `~/.config/cc-cfp/config.json`.
+`/cfp:init` asks the setup questions again and writes that path back to `config.json`.
 +
 Check: the `/cfp:init` summary lists your first store as the store path.
 

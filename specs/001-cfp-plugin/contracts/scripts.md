@@ -8,7 +8,7 @@ python3 -I "$PLUGIN_ROOT/scripts/cfp_store.py" <subcommand> [options]
 
 Conventions:
 
-- Store resolution order: `--store <path>`, then env `CFP_STORE`, then `~/.config/cc-cfp/config.json`. Missing store is an error for every subcommand except `config init`.
+- Store resolution order: `--store <path>`, then env `CFP_STORE`, then `~/.config/cc-cfp/config.json`. Missing store is an error for every subcommand except `config init`. (Superseded by feature 002: the default store is `<data folder>/store` and the config folder follows XDG; see specs/002-xdg-config-store/spec.md; the order ends with the default store instead of an error, see specs/002-xdg-config-store/contracts/paths.md.)
 - Output: a single JSON object on stdout. Success has `"ok": true`. Errors have `"ok": false, "error": "<message>"` on stdout and exit code 1. Usage errors exit 2.
 - Dates are ISO `YYYY-MM-DD`. `--today` overrides the current date (for tests and repeat-rule checks).
 - Write subcommands rewrite only the target file and preserve unknown front matter keys and body sections they do not own.
