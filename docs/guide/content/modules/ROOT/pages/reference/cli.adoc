@@ -9,7 +9,7 @@
 // cfp:cfp/scripts/cfplib/profile.py:19,135-178,204-261,361-373,391-440,446-499
 // cfp:cfp/scripts/cfplib/seeds.py:89-128,139-193
 // cfp:cfp/scripts/cfplib/bios.py:5,11-68,85-146
-// cfp:cfp/scripts/cfplib/talks.py:5-18,29-85,107-157
+// cfp:cfp/scripts/cfplib/talks.py:5-18,29-104,107-157
 // cfp:cfp/scripts/cfplib/proposals.py:7,93-111,144-210,260-302,313-385
 // cfp:cfp/scripts/cfplib/text.py:34-52
 // cfp:cfp/scripts/cfplib/counts.py:6-36
@@ -385,7 +385,7 @@ a|* `--proposal <id>`, required
 |`voice_pass: true`.
 |===
 
-`status` in the results of `set-field`, `set-bio-text`, `count`, and `pasteview` is one of `ok`, `over`, `unverified`, `no-limit`, or `not-on-form` for a bio the form does not have.
+`status` in the results of `set-field` and `set-bio-text`, and in each entry of `fields` and in `bio` for `count` and `pasteview`, is one of `ok`, `over`, `unverified`, `no-limit`, or `not-on-form` for a bio the form does not have.
 xref:internals/rules.adoc#character-counts-and-limit-statuses[How rules and verdicts are computed] explains the counts.
 
 [#count]
@@ -404,7 +404,7 @@ a|* `--proposal <id>`, required
 |`pasteview`
 a|* `--proposal <id>`, required
 * `--format <format>`: `json` (default) or `markdown`
-|With `json`: `proposal`, `talk`, `profile`, `event`, `event_name`, `session_type`, `status`, `fields` (in form order, with text, counts, and flags), `bio`, `over`, `missing_required`, `warnings`.
+|With `json`: `proposal`, `talk`, `profile`, `event`, `event_name`, `session_type`, `status` (the proposal status), `fields` (in form order, with text, counts, and flags), `bio`, `over`, `missing_required`, `warnings`.
 With `markdown`: the paste view as markdown text instead of JSON.
 |===
 
@@ -478,7 +478,7 @@ The proposal lifecycle.
 
 |`set`
 a|* `--proposal <id>`, required
-* `--to <status>`, required: `draft`, `ready`, `submitted`, `accepted`, `presented`, `rejected`, or `withdrawn`
+* `--to <status>`, required: `draft`, `ready`, `submitted`, `accepted`, `presented`, `rejected`, or `withdrawn`; an unknown value is a domain error (exit 1)
 * `--date <date>`: an ISO date, default today
 * `--force`: set `ready` without the ready check
 |`from`, `to`, `date`, `side_effects`.
