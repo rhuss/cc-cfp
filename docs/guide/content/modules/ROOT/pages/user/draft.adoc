@@ -2,16 +2,17 @@
 
 // Sources:
 // cfp:cfp/commands/draft.md:1-6
-// cfp:cfp/skills/draft/SKILL.md:4,10,14-28,30-49,51-55,57-64,66-84,86-92,94-106,108-133,135-149,151-168,170-172,174-198,200-206,208-214,216-229
-// cfp:cfp/skills/_shared/preamble.md:40,42,45
+// cfp:cfp/skills/draft/SKILL.md:3,4,10,14-28,30-49,51-55,57-64,66-84,86-92,94-106,108-133,135-149,151-168,170-172,174-198,200-206,208-214,216-229
+// cfp:cfp/skills/_shared/preamble.md:40,42,44,45
 // cfp:cfp/scripts/cfplib/talks.py:5-6,119-123
 // cfp:cfp/scripts/cfplib/proposals.py:79-111,144-170,181-206,232-257
 // cfp:cfp/scripts/cfplib/store.py:55-56
+// cfp:cfp/skills/init/SKILL.md:51,54
 // cfp:cfp/scripts/cfplib/config.py:117-123,152-158
 // cfp:cfp/scripts/cfp_store.py:69,189-190,438-440
 // cfp:cfp/knowledge-base/guidance/abstract-angles.md:5-27,40-42
 // cfp:cfp/knowledge-base/guidance/benefits-field.md:9,13-27
-// cfp:cfp/knowledge-base/profiles/kubecon/profile.md:13-43,65-73,128-136,213-214
+// cfp:cfp/knowledge-base/profiles/kubecon/profile.md:13-43,65-73,128-136,191,213-214
 // cfp:cfp/knowledge-base/profiles/kubecon/events/kubecon-eu-2027.md:2,9,12
 
 You have a talk idea and a conference form full of fields, each with its own limit and its own reviewers' expectations.
@@ -20,7 +21,7 @@ It interviews you about your talk, drafts every form field with you, lets a simu
 Nothing is ever submitted: you paste the texts into the conference form yourself.
 
 The flow has twelve steps, and cfp saves your work at every one of them.
-You can stop at any point and pick up where you left off.
+Until Step 4b, that work is your talk; from Step 4b on, it's a proposal you can resume by its id (see <<resume>>).
 
 This page follows one example from start to finish.
 Ada Example of Example Corp wants to talk about PodDisruptionBudgets during node drains, and she drafts for the `kubecon-eu-2027` edition of KubeCon + CloudNativeCon as a practice run.
@@ -56,7 +57,7 @@ Check: `cfp` either asks whether to resume one of your drafts or, when you have 
 
 image::draft-workflow.svg["The twelve steps of /cfp:draft from profile and event to the paste view, with Step 4b creating the proposal, the committee review loop with its round limit, and the park exit that saves the draft for a later resume",role=expand]
 
-Steps 1 to 4 build up your talk, and Step 4b turns it into a proposal for the chosen edition.
+Steps 1 and 2 pick the profile, the event, and the session type, Steps 3 and 4 build up your talk, and Step 4b turns it into a proposal for the chosen edition.
 From Step 4b on, every step saves to that proposal's id.
 Step 7 is a loop: when the committee review says `revise`, you choose which suggestions to apply, cfp rewrites and saves those fields, and another round runs.
 When the loop reaches your configured number of review rounds without a pass, you choose how to go on.
@@ -102,9 +103,9 @@ Some session types need more than one speaker, such as the Panel Discussion with
 When you pick one of those, cfp tells you that a solo speaker can't fill it and asks whether you have co-speakers.
 Answer no, and you're back at the list.
 Answer yes, and cfp asks for each co-speaker as "Name, Company", one question per speaker, until you say you're done or the session type is full.
-It can also ask for their genders, which the rule against all-men panels needs.
+It can also ask for their genders, which the all-men rule needs: KubeCon + CloudNativeCon doesn't accept a session with three or more speakers who all identify as men.
 `unknown` is a valid answer, and it counts as unknown, not as someone who isn't a man.
-`cfp` keeps both lists and stores them on the proposal in Step 4b.
+`cfp` keeps both lists until Step 4b and stores them on the proposal there.
 
 == Step 3: where your talk comes from
 
@@ -231,7 +232,7 @@ xref:user/bios.adoc[Bios and speaker resources] covers bios on their own.
 == Steps 7 to 12: review, polish, and the paste view
 
 The rest of the flow checks and polishes what you drafted.
-Two pages cover these steps in detail.
+The pages linked from each step cover them in detail.
 
 Step 7, the committee review loop:: `cfp` runs a simulated program committee review on the proposal, and each round returns a verdict and suggestions.
 On `revise`, you pick the suggestions to apply (all, some by number, or none), and cfp rewrites those fields, shows them with their counts, and saves them.
@@ -239,7 +240,7 @@ At the round limit without a pass, cfp lists the remaining weaknesses and asks y
 If you accept it as is, the proposal stays in `draft`, because `ready` needs a passing verdict.
 See xref:user/review.adoc[Committee review and voice pass].
 
-Step 8, the voice pass:: Only after a passing verdict, cfp runs the cc-prose humanizer on the title, the abstract, the relevance field, and the bio snapshot, with the voice profile from your config.
+Step 8, the voice pass:: Only after a passing verdict, cfp runs the cc-prose humanizer with the voice profile from your config on the title, the abstract, the relevance field when the form has one, and the bio snapshot when the form has a bio.
 You see each rewrite in full with its count and keep it or the previous version.
 Without cc-prose, cfp prints "Voice pass skipped: prose plugin not installed" and moves on.
 There's no second committee review after the voice pass.
@@ -264,10 +265,8 @@ xref:user/preflight.adoc[Pre-flight, counts, and the paste view] shows what the 
 [#resume]
 == Resume a draft
 
-Closed Claude Code halfway through the story interview?
-Parked the proposal after the review loop?
-Your work is saved either way.
-Resume with the proposal id:
+Parked the proposal after the review loop, or closed Claude Code somewhere after Step 4b?
+The proposal is saved, and you resume it with its id:
 
 [source,text]
 ----
@@ -276,6 +275,17 @@ Resume with the proposal id:
 
 You can also run `/cfp:draft` without arguments.
 When you have drafts, cfp lists them with their id, title, event, and last update, and asks whether to resume one or start a new one.
+
+Stopped before Step 4b, say halfway through the story interview?
+Then there's no proposal yet, but your talk is saved.
+Start again with the talk, and Step 4 asks only about the gaps:
+
+[source,text]
+----
+/cfp:draft --profile kubecon --event kubecon-eu-2027 --talk <talk-id>
+----
+
+Or run `/cfp:draft` and pick "Existing talk" in Step 3.
 
 `cfp` works out where to continue from what the proposal already has, and goes to the first step whose data is missing:
 
@@ -293,7 +303,7 @@ When you have drafts, cfp lists them with their id, title, event, and last updat
 Want to see your open drafts from your shell?
 The store CLI ships in your cc-cfp clone.
 
-Check: in your cc-cfp clone, the list of draft proposals includes Ada's proposal (or your own).
+Check: in your cc-cfp clone, the list of draft proposals includes Ada's proposal.
 
 [source,bash]
 ----
@@ -304,10 +314,12 @@ python3 -I cfp/scripts/cfp_store.py proposal list --status draft
 [#edit-ready]
 == Edit a ready proposal
 
-A proposal in `ready` status passed the committee review and a clean pre-flight for the text that was reviewed.
+Automatic `ready` in Step 11 needs a passing committee review and a clean pre-flight for the text that was reviewed.
 So when a step saves a field, the bio snapshot, or the metadata of a `ready` proposal, the proposal goes back to `draft`.
 `cfp` tells you so and runs the committee review and pre-flight again.
 
 Behind the scenes, the edit clears the stored pre-flight results and marks the last review as stale, while the review history stays.
 That stale review is what sends a resumed draft back to Step 7.
 Edits to a proposal that's still a draft, such as the voice pass or shortening, don't mark the review as stale.
+
+Resuming a `ready` proposal with `/cfp:draft --proposal <id>` goes to Step 12, the paste view, and `/cfp:draft` without arguments lists only drafts.
