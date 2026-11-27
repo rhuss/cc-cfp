@@ -86,7 +86,7 @@ The result has `seeds` and `warnings`. Show each entry of `warnings` that Step 5
 For an outdated profile:
 
 1. Say which seed is newer than the copy in the store, with both versions (`store_version` to `seed_version`): "the shipped `<profile>` profile" for `source: plugin`, "your personal `<profile>` profile in `<seed_dir>`" for `source: user`.
-2. For every entry in `files` with the state `changed`, print its path and then its `diff` in full in a fenced `diff` block. Explain once how to read it: lines starting with `-` are in the store now and would be replaced, lines starting with `+` come with the seed file (labeled `shipped/` or `user/`). Then list the files with the state `missing` (seed files, shipped or personal, that the store does not have). Files with the state `same` need nothing. Files with the state `unreadable` cannot be taken: show their `error`, never name them in `--files`, and say that `update everything shown` leaves them out (the command lists them under `skipped`).
+2. For every entry in `files` with the state `changed`, print its path and then its `diff` in full in a fenced `diff` block. Explain once how to read it: lines starting with `-` are in the store now and would be replaced, lines starting with `+` come with the seed file (labeled `shipped/` or `user/`). Then list the files with the state `missing` (seed files, shipped or personal, that the store does not have). Files with the state `same` need nothing. Files with the state `unreadable` cannot be taken: show their `error`, never name them in `--files`, and say that `update everything shown` leaves them out (the command lists them under `skipped`). Because any update makes the store profile current, a skipped file is not offered again later; recommend `skip` now, fixing the file, and running `/cfp:init` again, so the update can include it.
 3. Ask (AskUserQuestion) what to do:
    - `update everything shown`: offer it only when a file other than `profile.md` is changed or missing.
    - `update the profile only`: `profile.md` is replaced, the other files stay as they are.
@@ -107,7 +107,7 @@ What the update does and does not do, to tell the user before they choose:
 - It replaces whole files. Hand edits in a replaced file are lost, which is why the diff comes first.
 - The approval of the profile and of every replaced event stays as it was.
 - Files that only the store has (events the user added, examples of accepted proposals) are never touched.
-- After `update the profile only`, the store profile is current and the skipped files are not offered again. Their seed copies stay readable under `seed_dir`.
+- After `update the profile only`, or after `update everything shown` with unreadable files left out, the store profile is current and the skipped files are not offered again. Their seed copies stay under `seed_dir`; to take a skipped file later, copy it into the store profile by hand or raise the seed's `seed_version` again.
 - After `skip`, the store copy stays as it is and the next `/cfp:init` run offers the update again.
 
 ## Step 7: Report
