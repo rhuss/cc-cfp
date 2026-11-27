@@ -21,10 +21,10 @@ If `<store-initialized>` is already `true`, show the current store path from `<s
 
 Otherwise pick a default:
 
-- Use Glob on `~/Obsidian/*` (directories). If exactly one vault exists, default to `~/Obsidian/<vault>/Talks`. If several exist, offer each `~/Obsidian/<vault>/Talks` as a choice plus "Other".
-- If `~/Obsidian` does not exist, default to `~/cfp-store`.
+- Run `python3 -I "$PLUGIN_ROOT/scripts/cfp_store.py" config show` and take `store` from the result. It is an absolute path: `CFP_STORE` when set, else the `store` entry of the config file, else the neutral default `<data folder>/store` (for example `~/.local/share/cc-cfp/store`). On `"ok": false`, show the error (it names the environment variable to fix) and stop.
+- Use Glob on `~/Obsidian/*` (directories). For up to three vaults, sorted by name, add `~/Obsidian/<vault>/Talks` as further choices. Never make a vault the default; further vaults can be typed into the free-text option.
 
-Ask (AskUserQuestion): "Where should the store live?" with the default and "Other" (free text). Expand `~`.
+Ask (AskUserQuestion): "Where should the store live?" with the default first, marked as recommended and shown as the full absolute path, then the vault choices, then "Other" (free text). Expand `~`.
 
 ## Step 2: Speaker name and company
 
@@ -51,7 +51,9 @@ python3 -I "$PLUGIN_ROOT/scripts/cfp_store.py" config init \
   --review-rounds <n> --seed-dir "$PLUGIN_ROOT/knowledge-base/profiles"
 ```
 
-Omit `--speaker-company` and `--voice-profile` when empty. The command creates `profiles/`, `talks/`, `proposals/`, `bios/`, `resources/`, writes `<store>/config.md`, writes `~/.config/cc-cfp/config.json`, and copies every seed profile that is not already in the store (seeded profiles are marked approved so drafting works immediately). It never overwrites a profile that is already there; Step 6 handles those.
+Omit `--speaker-company` and `--voice-profile` when empty. The command creates the store folder (with missing parents), `profiles/`, `talks/`, `proposals/`, `bios/`, `resources/`, writes `<store>/config.md`, saves the store path in the config file named by `config_write_path` in the result, and copies every seed profile that is not already in the store (seeded profiles are marked approved so drafting works immediately). It never overwrites a profile that is already there; Step 6 handles those.
+
+Show every entry of `warnings` from the result. One of them says that `CFP_STORE` is set and overrides the saved store in later sessions; tell the user to remove or change the variable if the chosen path should win.
 
 On `"ok": false`, show the error and ask whether to try a different path.
 
@@ -102,10 +104,12 @@ What the update does and does not do, to tell the user before they choose:
 
 Print a short summary:
 
-- Store path
+- Store path (absolute)
+- Config file (`config_write_path` from Step 5, or `config_write_path` from `config show` when Step 1 kept the store)
+- Personal profiles folder (`user_profiles_dir`): put personal conference profiles here
 - Seeded profiles (from `seeded_profiles` of Step 5), or "no new profiles seeded (already present)"
 - Shipped profile updates applied or skipped in Step 6, with the versions
 - Speaker, company, voice profile, review rounds
 - Next command: `/cfp:draft` to start a proposal, `/cfp:bio new` to add a bio first, `/cfp:profile list` to see the conferences and their deadlines
 
-Mention that every store file is plain markdown with front matter and can be edited in Obsidian.
+Mention that every store file is plain markdown with front matter and can be edited in any editor or opened as an Obsidian vault.

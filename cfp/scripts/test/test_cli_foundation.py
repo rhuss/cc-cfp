@@ -54,6 +54,87 @@ def test_nothing_configured_uses_default_store(tmp_store, tmp_home, run_cli):
     assert shown["store"] == str(default) and shown["exists"] is False
 
 
+UNSET = {"CFP_STORE": None}
+
+
+def test_config_show_reports_locations_with_nothing_configured(tmp_home, run_cli):
+    shown = run_cli("config", "show", env=UNSET)
+    data_dir = tmp_home / ".local" / "share" / "cc-cfp"
+    assert shown["store"] == str(data_dir / "store")
+    assert shown["store_source"] == "default"
+    assert shown["exists"] is False
+    assert shown["config"]["speaker_name"] == ""
+    assert shown["config_file"] is None
+    assert shown["config_write_path"] == str(tmp_home / ".config" / "cc-cfp" / "config.json")
+    assert shown["data_dir"] == str(data_dir)
+    assert shown["user_profiles_dir"] == str(data_dir / "profiles")
+
+
+def test_config_show_reports_sources_and_files(tmp_home, tmp_path, tmp_store, run_cli):
+    shown = run_cli("config", "show")
+    assert shown["store"] == str(tmp_store.resolve()) and shown["store_source"] == "environment"
+    shown = run_cli("config", "show", "--store", tmp_path / "cli")
+    assert shown["store"] == str((tmp_path / "cli").resolve()) and shown["store_source"] == "argument"
+
+    legacy = tmp_home / ".config" / "cc-cfp" / "config.json"
+    legacy.parent.mkdir(parents=True)
+    legacy.write_text(json.dumps({"store": str(tmp_path / "old")}))
+    env = {"CFP_STORE": None, "XDG_CONFIG_HOME": str(tmp_path / "cfg"), "XDG_DATA_HOME": str(tmp_path / "data")}
+    shown = run_cli("config", "show", env=env)
+    assert shown["store"] == str((tmp_path / "old").resolve()) and shown["store_source"] == "config"
+    assert shown["config_file"] == str(legacy)
+    assert shown["config_write_path"] == str(tmp_path / "cfg" / "cc-cfp" / "config.json")
+    assert shown["data_dir"] == str(tmp_path / "data" / "cc-cfp")
+    assert shown["user_profiles_dir"] == str(tmp_path / "data" / "cc-cfp" / "profiles")
+
+
+def test_config_show_and_init_fail_on_relative_data_dir(tmp_store, run_cli):
+    for args in (("config", "show"), ("config", "init", "--speaker-name", "A")):
+        result = run_cli(*args, env={"CFP_DATA_DIR": "rel"}, expect_ok=False)
+        assert result.code == 1 and result["ok"] is False
+        assert "CFP_DATA_DIR must be an absolute path" in result["error"]
+    assert not tmp_store.exists()
+
+
+def test_config_init_without_store_creates_default(tmp_home, run_cli):
+    data_dir = tmp_home / ".local" / "share" / "cc-cfp"
+    result = run_cli("config", "init", "--speaker-name", "A", "--seed-dir", SEED_DIR, env=UNSET)
+    assert result["store"] == str(data_dir / "store")
+    assert (data_dir / "store" / "config.md").is_file()
+    write_path = tmp_home / ".config" / "cc-cfp" / "config.json"
+    assert result["config_write_path"] == str(write_path)
+    assert result["user_profiles_dir"] == str(data_dir / "profiles")
+    assert result["warnings"] == []
+    assert json.loads(write_path.read_text())["store"] == str(data_dir / "store")
+    assert not (data_dir / "profiles").exists()
+    shown = run_cli("config", "show", env=UNSET)
+    assert shown["store_source"] == "config" and shown["exists"] is True
+    assert shown["config_file"] == str(write_path)
+
+
+def test_config_init_overwrites_malformed_config(tmp_home, tmp_store, run_cli):
+    path = tmp_home / ".config" / "cc-cfp" / "config.json"
+    path.parent.mkdir(parents=True)
+    path.write_text("{broken")
+    run_cli("config", "init", "--store", tmp_store, "--speaker-name", "A")
+    assert json.loads(path.read_text()) == {"store": str(tmp_store.resolve())}
+
+
+def test_config_init_warns_when_cfp_store_overrides(tmp_home, tmp_path, run_cli):
+    chosen = tmp_path / "chosen"
+    other = tmp_path / "other"
+    result = run_cli("config", "init", "--store", chosen, "--speaker-name", "A", env={"CFP_STORE": str(other)})
+    assert result["warnings"] == [
+        f"CFP_STORE is set to '{other}' and overrides the saved store '{chosen.resolve()}' in later sessions"
+    ]
+    same = run_cli(
+        "config", "init", "--store", tmp_home / "x", "--speaker-name", "A", env={"CFP_STORE": "~/x"}
+    )
+    assert same["warnings"] == []
+    from_env = run_cli("config", "init", "--speaker-name", "A", env={"CFP_STORE": str(other)})
+    assert from_env["store"] == str(other.resolve()) and from_env["warnings"] == []
+
+
 def test_usage_error_exits_2(run_cli):
     result = run_cli("profile", "bogus", expect_ok=False)
     assert result.code == 2

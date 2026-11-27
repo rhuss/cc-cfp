@@ -10,6 +10,7 @@ have ``"ok": false, "error": ...`` and exit code 1; usage errors exit 2.
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -22,6 +23,7 @@ from cfplib import (  # noqa: E402
     counts,
     lifecycle,
     pasteview,
+    paths,
     preflight,
     profile,
     proposals,
@@ -285,14 +287,43 @@ def ctx_today(args):
 
 
 def cmd_config_show(args):
-    store = config.resolve_store(getattr(args, "store", None))
+    store, source = config.resolve_store_with_source(getattr(args, "store", None))
+    data_dir = paths.data_dir()  # an invalid CFP_DATA_DIR fails here, even when the store came from elsewhere
+    _, read_path = paths.read_config()
     exists = config.store_config_path(store).is_file()
     cfg = config.load_store_config(store) if exists else dict(config.DEFAULT_STORE_CONFIG)
-    return {"store": str(store), "exists": exists, "config": cfg}
+    return {
+        "store": str(store),
+        "store_source": source,
+        "exists": exists,
+        "config": cfg,
+        "config_file": str(read_path) if read_path else None,
+        "config_write_path": str(paths.config_file()),
+        "data_dir": str(data_dir),
+        "user_profiles_dir": str(paths.user_profiles_dir()),
+    }
+
+
+def _cfp_store_warning(store):
+    """Warn when CFP_STORE names another store than the one being saved.
+
+    Paths are compared after ``~`` expansion and resolution. A relative
+    CFP_STORE (an error for later commands) also differs, so it warns too.
+    """
+    raw = os.environ.get("CFP_STORE", "").strip()
+    if not raw:
+        return []
+    try:
+        if paths.env_store().resolve() == Path(store):
+            return []
+    except CfpError:
+        pass
+    return [f"CFP_STORE is set to '{raw}' and overrides the saved store '{store}' in later sessions"]
 
 
 def cmd_config_init(args):
-    store = getattr(args, "store", None) or config.resolve_store(None)
+    user_profiles_dir = paths.user_profiles_dir()  # fails on an invalid CFP_DATA_DIR before anything is written
+    store = config.resolve_store(getattr(args, "store", None))
     values = {
         "speaker_name": args.speaker_name,
         "speaker_company": args.speaker_company,
@@ -300,7 +331,10 @@ def cmd_config_init(args):
         "review_rounds": args.review_rounds,
         "default_profile": args.default_profile,
     }
-    return config.init_store(store, values, seed_dir=args.seed_dir)
+    result = config.init_store(store, values, seed_dir=args.seed_dir)
+    result["warnings"] = _cfp_store_warning(Path(result["store"]))
+    result["user_profiles_dir"] = str(user_profiles_dir)
+    return result
 
 
 def cmd_config_set(args):

@@ -165,5 +165,10 @@ def init_store(store, values, seed_dir=None):
         if profiles:
             write_store_config(store, {"default_profile": profiles[0]})
 
-    write_user_config(store)
-    return {"store": str(store), "created": created, "seeded_profiles": seeded}
+    config_write_path = write_user_config(store)
+    return {
+        "store": str(store),
+        "created": created,
+        "seeded_profiles": seeded,
+        "config_write_path": str(config_write_path),
+    }
