@@ -63,3 +63,14 @@ rules:
       - 'xref:user/review\.adoc'
       - 'xref:user/preflight\.adoc'
       - 'xref:profiles/refresh\.adoc'
+  - glob: "content/modules/ROOT/pages/user/review.adoc"
+    require:
+      - 'cfp:committee-review'
+      - '(?i)advisory'
+      - '(?i)packet'
+      - '(?i)voice pass'
+      - 'prose:humanizer'
+      - 'prose plugin not installed'
+      - '^// url:https://code\.claude\.com/docs/en/sub-agents'
+    forbid:
+      - '(?i)\bpredicts?\b'
