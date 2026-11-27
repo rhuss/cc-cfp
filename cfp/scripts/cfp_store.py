@@ -133,9 +133,9 @@ def build_parser():
     choice = p.add_mutually_exclusive_group()
     choice.add_argument(
         "--files", default=None,
-        help="comma-separated shipped files to take besides profile.md (paths as seed-status prints them)",
+        help="comma-separated seed files to take besides profile.md (paths as seed-status prints them)",
     )
-    choice.add_argument("--all", action="store_true", help="take every changed or missing shipped file")
+    choice.add_argument("--all", action="store_true", help="take every changed or missing seed file")
 
     # event
     g = group("event", "event overrides")
@@ -290,10 +290,10 @@ def ctx_today(args):
 
 
 def cmd_config_show(args):
-    store, source = config.resolve_store_with_source(getattr(args, "store", None))
+    store, source = paths.resolve_store(getattr(args, "store", None))
     data_dir = paths.data_dir()  # an invalid CFP_DATA_DIR fails here, even when the store came from elsewhere
     _, read_path = paths.read_config()
-    exists = config.store_config_path(store).is_file()
+    exists = paths.store_initialized(store)
     cfg = config.load_store_config(store) if exists else dict(config.DEFAULT_STORE_CONFIG)
     return {
         "store": str(store),

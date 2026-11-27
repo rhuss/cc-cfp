@@ -26,10 +26,12 @@ Adds `warnings: [str]`, `config_write_path` (the file written), and `user_profil
 
 Optional hidden argument `--user-seed-dir <path>` (tests) overrides `user_profiles_dir`.
 
+A seed profile, shipped or personal, is exactly `profile.md`, `events/*.md` and `examples/*.md`; init copies those files as regular files and skips symlinked `events/` or `examples/` folders and files. A clash needs the exact same name. A user folder whose name differs from a shipped one only in case is skipped with a warning on every file system (on APFS and NTFS both names are one store folder). A seed whose store folder exists only under another case (for example a personal `ACME` and a store profile `acme` on APFS) is not copied by init, left out of seed-status and refused by seed-update, each with the warning `profile '<name>' from <dir> not used: the store already has '<existing>', ...`.
+
 ## `profile seed-status`
 
-`{"seeds": [...], "warnings": [...]}`. Each seed entry adds `source` (`plugin`|`user`) and `seed_dir`. Diffs of user seeds use `user/<rel>` as target label. `--seed-dir` stays the plugin folder; optional `--user-seed-dir`. Fails on an invalid `CFP_DATA_DIR`.
+`{"seeds": [...], "warnings": [...]}`. Each seed entry adds `source` (`plugin`|`user`) and `seed_dir`. Diffs of user seeds use `user/<rel>` as target label. A seed whose store folder exists only under another case is left out of `seeds` with the `not used` warning. `--seed-dir` stays the plugin folder; optional `--user-seed-dir`. Fails on an invalid `CFP_DATA_DIR`.
 
 ## `profile seed-update`
 
-Result adds `source` and `warnings`. A name present only in the user folder is accepted. Error text for an unknown profile: `no seed profile '<id>' in <plugin dir> or <user dir>`. Fails on an invalid `CFP_DATA_DIR`.
+Result adds `source` and `warnings`. A name present only in the user folder is accepted. Error text for an unknown profile: `no seed profile '<id>' in <plugin dir> or <user dir>`. A profile whose store folder exists only under another case is refused with the `not used` warning text. Refused before any write when the store's `profiles/` folder, the store profile folder, its `events/` or `examples/` folder, or a file to be written is a symlink (the write would change a file outside the store). Fails on an invalid `CFP_DATA_DIR`.

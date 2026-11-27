@@ -15,7 +15,7 @@ import stat
 import tempfile
 from pathlib import Path
 
-from cfplib import CfpError, frontmatter, paths, seeds
+from cfplib import CfpError, frontmatter, fsutil, paths, seeds
 from cfplib import store as store_module
 
 STORE_DIRS = ("profiles", "talks", "proposals", "bios", "resources")
@@ -29,29 +29,15 @@ DEFAULT_STORE_CONFIG = {
 INT_KEYS = {"review_rounds"}
 
 
-def user_config_path():
-    """The config file the next write goes to (it may not exist yet)."""
-    return paths.config_file()
-
-
-def load_user_config():
-    """Return the user config dict in effect, or {} when missing or malformed."""
-    return paths.read_config()[0]
-
-
 def write_user_config(store):
     """Save the store path, keeping unknown keys of the file that was read."""
     path = paths.config_file()
     data = dict(paths.read_config()[0])
-    path.parent.mkdir(parents=True, exist_ok=True)
     data["store"] = str(Path(store).expanduser().resolve())
-    path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    # Atomic, so a crash or a full disk never leaves a truncated config.json (which would silently
+    # send every later command to the default store); a symlinked config.json keeps its link.
+    fsutil.write_text_atomic(path, json.dumps(data, indent=2) + "\n")
     return path
-
-
-def resolve_store_with_source(cli_store):
-    """Return ``(store, source)``; see ``cfplib.paths.resolve_store``."""
-    return paths.resolve_store(cli_store)
 
 
 def resolve_store(cli_store):
@@ -66,7 +52,7 @@ def store_config_path(store):
 def require_store(store):
     """Ensure the store exists and is initialized; return it as a Path."""
     store = Path(store)
-    if not store_config_path(store).is_file():
+    if not paths.store_initialized(store):  # raises on an access error instead of claiming "not initialized"
         raise CfpError(
             f"store not initialized at {store}: run 'config init --store {store} --speaker-name <name>' (or /cfp:init)"
         )
@@ -128,6 +114,7 @@ def _seed_profile(seed_profile_dir, target_dir):
     anything is written, so a broken seed raises an error that names the
     seed file. The copy is built in a unique hidden sibling folder and
     renamed into place, so a failure never leaves a partial profile behind.
+    Returns False when another init created the profile folder first.
     """
     meta, body = frontmatter.load(seed_profile_dir / seeds.PROFILE_FILE)
     meta["approved"] = True
@@ -143,10 +130,19 @@ def _seed_profile(seed_profile_dir, target_dir):
             destination.parent.mkdir(parents=True, exist_ok=True)
             destination.write_bytes((seed_profile_dir / rel).read_bytes())
         frontmatter.save(staging / seeds.PROFILE_FILE, meta, body)
-        os.replace(staging, target_dir)
+        try:
+            os.replace(staging, target_dir)
+        except OSError:
+            if not target_dir.is_dir():
+                raise
+            # Another init filled the profile folder after our exists() check (ENOTEMPTY or EEXIST):
+            # keep its copy and drop ours.
+            shutil.rmtree(staging, ignore_errors=True)
+            return False
     except BaseException:
         shutil.rmtree(staging, ignore_errors=True)
         raise
+    return True
 
 
 def init_store(store, values, seed_dir=None, user_seed_dir=None):
@@ -175,9 +171,14 @@ def init_store(store, values, seed_dir=None, user_seed_dir=None):
     for entry in entries:
         target = store / "profiles" / entry["name"]
         if target.exists() or target.is_symlink():
+            existing = store_module.case_alias(target.parent, target.name)
+            if existing is not None:
+                # On APFS or NTFS 'Acme' and 'acme' are one folder; say so instead of skipping silently.
+                warnings.append(seeds.alias_warning(entry, existing))
             continue
         try:
-            _seed_profile(entry["dir"], target)
+            if not _seed_profile(entry["dir"], target):
+                continue  # a concurrent init seeded it
         except (CfpError, OSError) as error:
             if entry["source"] != "user":
                 raise

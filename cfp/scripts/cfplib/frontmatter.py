@@ -13,13 +13,11 @@ Files are written atomically (temporary file plus rename).
 """
 
 import json
-import os
 import re
-import stat
 from collections import OrderedDict
 from pathlib import Path
 
-from cfplib import CfpError
+from cfplib import CfpError, fsutil
 
 DELIM = "---"
 _INT_RE = re.compile(r"^-?\d+$")
@@ -548,21 +546,5 @@ def load(path):
 
 
 def save(path, meta, body):
-    """Write atomically: a hidden sibling temp file is renamed over the target.
-
-    A symlinked target is resolved first so the real file receives the write.
-    """
-    path = Path(path)
-    if path.is_symlink():
-        path = path.resolve()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
-    try:
-        temp.write_text(dump(meta, body), encoding="utf-8")
-        if path.exists():
-            os.chmod(temp, stat.S_IMODE(path.stat().st_mode))
-        os.replace(temp, path)
-    finally:
-        if temp.exists():
-            temp.unlink()
-    return path
+    """Write a front matter file atomically; see ``fsutil.write_text_atomic``."""
+    return fsutil.write_text_atomic(path, dump(meta, body))

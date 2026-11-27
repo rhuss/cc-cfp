@@ -58,8 +58,9 @@ Keep the `warnings` of the result for this run and show each one once. These kin
 - `CFP_STORE is set to ... and overrides the saved store ...`: tell the user to remove or change the variable if the chosen path should win.
 - `CFP_STORE must be an absolute path, ...`: the variable is broken; tell the user to fix or unset it, because later commands fail until then.
 - `profile '<name>': using <user folder> instead of the shipped <plugin folder>`: a personal profile replaces the shipped one of the same name. Step 6 reports the same clash again; show it only once per run (de-duplicate by profile name).
-- `profile folder '<name>' in <user folder> skipped: ...`: the folder name is not a valid profile id; tell the user to rename the folder.
+- `profile folder '<name>' in <user folder> skipped: ...`: the folder name is not usable (not a valid profile id, or it differs from a shipped profile only in case); tell the user to rename the folder as the message says.
 - `profile '<name>' from <user folder> skipped: ...`: the personal profile could not be read (the message names the file); tell the user to fix it and run `/cfp:init` again, which then copies it.
+- `profile '<name>' from <folder> not used: the store already has '<existing>', ...`: the file system treats both names as one folder (macOS, Windows), so the seed is never copied, compared or updated; tell the user to rename one of them so the names differ in more than case.
 
 On `"ok": false`, show the error and ask whether to try a different path.
 

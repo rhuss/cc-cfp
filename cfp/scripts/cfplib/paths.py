@@ -25,6 +25,7 @@ Every function takes ``env`` (default ``os.environ``) and ``home`` (default
 
 import json
 import os
+import stat
 from pathlib import Path
 
 from cfplib import CfpError
@@ -157,3 +158,20 @@ def resolve_store(cli_store, env=None, home=None):
             candidate = read_path.parent / candidate
         return candidate.resolve(), "config"
     return default_store(env, home).resolve(), "default"
+
+
+def store_initialized(store):
+    """True when ``<store>/config.md`` is a regular file, False when it does not exist.
+
+    Uses ``os.stat``, not ``Path.is_file``: since Python 3.14 ``is_file()``
+    hides a PermissionError as False, which would make a store the process
+    cannot read look uninitialized. Any other access error raises CfpError.
+    The CLI and the session hook share this check.
+    """
+    config_md = Path(store) / "config.md"
+    try:
+        return stat.S_ISREG(os.stat(config_md).st_mode)
+    except (FileNotFoundError, NotADirectoryError):
+        return False
+    except OSError as error:
+        raise CfpError(f"cannot access {config_md}: {error.strerror or error}") from None

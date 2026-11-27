@@ -1,5 +1,6 @@
 """Store paths, slugs, and generic file access."""
 
+import os
 import re
 import unicodedata
 from pathlib import Path
@@ -34,9 +35,24 @@ def slugify(text, existing=None):
     return candidate
 
 
+def case_alias(directory, name):
+    """The entry of ``directory`` that ``name`` reaches only through case folding (APFS, NTFS), else None.
+
+    On a case-sensitive file system, or when the exact name exists, or when
+    the folder cannot be listed, the result is None.
+    """
+    try:
+        names = os.listdir(directory)
+    except OSError:
+        return None
+    if name in names or not (Path(directory) / name).exists():
+        return None
+    return next((entry for entry in names if entry.lower() == name.lower()), None)
+
+
 def check_id(value, what="id"):
     value = str(value or "")
-    if not _SAFE_ID.match(value) or ".." in value:
+    if not _SAFE_ID.fullmatch(value) or ".." in value:
         raise CfpError(f"invalid {what}: {value!r} (use letters, digits, hyphens)")
     return value
 

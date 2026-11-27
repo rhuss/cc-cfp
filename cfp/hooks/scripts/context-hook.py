@@ -20,8 +20,6 @@ accessed (for example folder permissions or a symlink loop).
 
 import datetime
 import json
-import os
-import stat
 import sys
 from pathlib import Path
 from xml.sax.saxutils import escape
@@ -38,7 +36,11 @@ def read_hook_input():
 
 
 def resolve_store():
-    """Return ``(store path or "", error message or None)``."""
+    """Return ``(store path or "", initialized, error message or None)``.
+
+    Resolution and the initialized check both come from ``cfplib.paths``, so
+    the hook and the CLI agree on access errors too.
+    """
     try:
         scripts = str(PLUGIN_ROOT / "scripts")
         if scripts not in sys.path:
@@ -46,9 +48,10 @@ def resolve_store():
         from cfplib import paths
 
         store, _source = paths.resolve_store(None)
-        return str(store), None
+        return str(store), paths.store_initialized(store), None
     except Exception as error:  # noqa: BLE001  the hook must never fail a /cfp: prompt
-        return "", str(error) or type(error).__name__
+        # <store> is empty whenever <store-error> is present
+        return "", False, str(error) or type(error).__name__
 
 
 def main():
@@ -57,18 +60,7 @@ def main():
     if not isinstance(prompt, str) or not prompt.startswith("/cfp:"):
         return 0
 
-    store, error = resolve_store()
-    initialized = False
-    if store:
-        config_md = Path(store) / "config.md"
-        # os.stat, not Path.is_file: since Python 3.14 is_file() hides a PermissionError as False.
-        try:
-            initialized = stat.S_ISREG(os.stat(config_md).st_mode)
-        except (FileNotFoundError, NotADirectoryError):
-            pass
-        except OSError as os_error:  # for example a store in a folder the process may not read
-            error = f"cannot access {config_md}: {os_error.strerror or os_error}"
-            store = ""  # as for a resolution error: <store> is empty whenever <store-error> is present
+    store, initialized, error = resolve_store()
     today = datetime.date.today().isoformat()
 
     lines = [

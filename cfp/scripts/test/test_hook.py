@@ -197,8 +197,11 @@ def test_store_check_does_not_rely_on_path_is_file(tmp_path, monkeypatch, capsys
     def denied(path):
         raise PermissionError(13, "Permission denied")
 
-    # Replace only the hook's own reference to os, not os.stat for the whole process.
-    monkeypatch.setattr(hook, "os", type("FakeOs", (), {"stat": staticmethod(denied)}))
+    # The hook checks through cfplib.paths; replace only that module's reference to os, not os.stat
+    # for the whole process.
+    from cfplib import paths
+
+    monkeypatch.setattr(paths, "os", type("FakeOs", (), {"stat": staticmethod(denied), "__getattr__": lambda self, name: getattr(os, name)})())
     monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps({"prompt": "/cfp:status"})))
     assert hook.main() == 0
     context = context_of(capsys.readouterr().out)

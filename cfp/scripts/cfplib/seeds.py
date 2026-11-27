@@ -21,7 +21,9 @@ PROFILE_FILE = "profile.md"
 SEED_SUBDIRS = ("events", "examples")
 # Besides profile.md, files under these directories carry an approval flag.
 APPROVED_PREFIXES = ("events/",)
+# Diff headers keep the "user/<file>" prefix that seed-status documents; messages use plain words.
 DIFF_LABELS = {"plugin": "shipped", "user": "user"}
+SOURCE_NAMES = {"plugin": "shipped", "user": "personal"}
 
 
 def _profile_folders(seed_dir):
@@ -50,7 +52,9 @@ def collect(plugin_dir, user_dir=None):
     missing ``plugin_dir`` is an error; ``None`` means no plugin source), then
     the user's own profiles. A user profile with the name of a shipped one
     takes its place and adds one warning. A missing ``user_dir`` (or ``None``)
-    is an empty source.
+    is an empty source. A user folder whose name differs from a shipped one
+    only in case is skipped with a warning on every file system, because on
+    APFS or NTFS both names are one store folder.
     """
     entries = []
     if plugin_dir is not None:
@@ -58,6 +62,7 @@ def collect(plugin_dir, user_dir=None):
     warnings = []
     if user_dir is not None and Path(user_dir).is_dir():
         index = {entry["name"]: i for i, entry in enumerate(entries)}
+        folded = {entry["name"].lower(): entry["name"] for entry in entries}
         for folder in _profile_folders(user_dir):
             try:
                 store.check_id(folder.name, "profile id")
@@ -66,6 +71,13 @@ def collect(plugin_dir, user_dir=None):
                 warnings.append(
                     f"profile folder '{folder.name}' in {user_dir} skipped: "
                     "a profile name starts with a letter or digit and uses only letters, digits, '.', '_', and '-'"
+                )
+                continue
+            shipped_name = folded.get(folder.name.lower())
+            if shipped_name is not None and shipped_name != folder.name:
+                warnings.append(
+                    f"profile folder '{folder.name}' in {user_dir} skipped: it differs from the shipped profile "
+                    f"'{shipped_name}' only in case; rename it to '{shipped_name}' to replace the shipped profile"
                 )
                 continue
             user_entry = {"name": folder.name, "dir": folder, "source": "user"}
@@ -192,14 +204,39 @@ def _entry_status(store_path, entry):
     return info
 
 
+def alias_warning(entry, existing):
+    """The warning for a seed whose store folder exists only under another case (see store.case_alias)."""
+    return (
+        f"profile '{entry['name']}' from {entry['dir']} not used: the store already has '{existing}', "
+        "which this file system treats as the same folder; rename one of them so the names differ in more than case"
+    )
+
+
+def _store_alias(store_path, entry):
+    return store.case_alias(Path(store_path) / "profiles", entry["name"])
+
+
 def status_report(store_path, seed_dir, user_dir=None):
-    """Return ``(status list, warnings)``; see ``status`` and ``collect``."""
+    """Return ``(status list, warnings)``; see ``status`` and ``collect``.
+
+    A seed whose store folder exists only under another case is left out with
+    a warning, so it is never compared with (or written into) another profile.
+    """
     entries, warnings = collect(seed_dir, user_dir)
-    return [_entry_status(store_path, entry) for entry in entries], warnings
+    listing = []
+    for entry in entries:
+        existing = _store_alias(store_path, entry)
+        if existing is not None:
+            warnings.append(alias_warning(entry, existing))
+            continue
+        listing.append(_entry_status(store_path, entry))
+    return listing, warnings
 
 
 def status(store_path, seed_dir, user_dir=None):
     """One entry per seed profile: its state in the store and, when outdated, its files.
+
+    A seed whose store folder exists only under another case is left out (see ``status_report``).
 
     States: ``missing`` (not in the store yet), ``current``, ``outdated``
     (the seed's ``seed_version`` is higher), ``newer``, ``local`` (the store
@@ -228,7 +265,10 @@ def update(store_path, seed_dir, profile_id, files=None, all_files=False, user_d
     ``files`` or with ``all_files``; ``all_files`` leaves unreadable seed
     files out, and naming one in ``files`` refuses the call. Replaced profile
     and event files keep the approval flag of the store copy. Nothing is
-    written when the call is refused.
+    written when the call is refused: an unknown or not outdated profile, a
+    store folder that exists only under another case, unreadable seed files
+    that were named, or a symlink in the store's ``profiles/`` folder, the
+    profile folder, its subfolders, or a file to be written.
     """
     profile_id = store.check_id(profile_id, "profile id")
     entries, warnings = collect(seed_dir, user_dir)
@@ -237,12 +277,15 @@ def update(store_path, seed_dir, profile_id, files=None, all_files=False, user_d
         if user_dir is None:
             raise CfpError(f"no shipped profile '{profile_id}' in {seed_dir}")
         raise CfpError(f"no seed profile '{profile_id}' in {seed_dir} or {user_dir}")
+    existing = _store_alias(store_path, entry)
+    if existing is not None:
+        raise CfpError(alias_warning(entry, existing))
     seed_profile_dir = entry["dir"]
     info = _profile_status(store_path, seed_profile_dir, entry["source"])
     if info["state"] != "outdated":
         raise CfpError(f"profile '{profile_id}' is not outdated (state: {info['state']}); nothing to update")
 
-    states = {entry["path"]: entry["state"] for entry in info["files"]}
+    states = {item["path"]: item["state"] for item in info["files"]}
     open_files = [path for path, state in states.items() if path != PROFILE_FILE and state != "same"]
     if all_files:
         # "Everything" means every file that can be taken; unreadable seed files stay in "skipped".
@@ -255,7 +298,8 @@ def update(store_path, seed_dir, profile_id, files=None, all_files=False, user_d
                 continue
             if rel not in states:
                 raise CfpError(
-                    f"'{rel}' is not a file of the shipped profile '{profile_id}'; shipped files: {', '.join(states)}"
+                    f"'{rel}' is not a file of the {SOURCE_NAMES[entry['source']]} profile '{profile_id}'; "
+                    f"seed files: {', '.join(states)}"
                 )
             chosen.add(rel)
 
@@ -269,7 +313,9 @@ def update(store_path, seed_dir, profile_id, files=None, all_files=False, user_d
         )
     linked = [
         str(path)
-        for path in [target_dir] + [target_dir / sub for sub in SEED_SUBDIRS] + [target_dir / rel for rel in writes]
+        for path in [target_dir.parent, target_dir]
+        + [target_dir / sub for sub in SEED_SUBDIRS]
+        + [target_dir / rel for rel in writes]
         if path.is_symlink()
     ]
     if linked:

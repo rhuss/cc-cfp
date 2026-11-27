@@ -110,8 +110,11 @@ In the store folder, it creates:
 
 * the folders `profiles/`, `talks/`, `proposals/`, `bios/`, and `resources/`;
 * `config.md`, with your name, company, voice profile, review rounds, and default profile;
-* a copy of the shipped KubeCon + CloudNativeCon profile under `profiles/`, marked as approved so drafting works right away, and set as your default profile;
+* a copy of the shipped KubeCon + CloudNativeCon profile under `profiles/`, marked as approved so drafting works right away;
 * a copy of each of your personal profiles, also marked as approved.
+
+When you have not chosen a default profile, the first profile name in alphabetical order becomes the default.
+Without personal profiles that is KubeCon; a personal profile such as `acme` comes first.
 
 Outside the store, it writes `config.json` in your config folder (by default `~/.config/cc-cfp/config.json`), which holds the store path.
 It doesn't create the data folder or its `profiles/` folder, unless the store itself goes there.

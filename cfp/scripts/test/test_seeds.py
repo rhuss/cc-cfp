@@ -329,6 +329,16 @@ def test_unreadable_seed_event_is_reported_and_refused(seeded_store, tmp_path):
     assert (seeded_store / "profiles" / "kubecon" / "profile.md").read_bytes() == before
     result = seeds.update(seeded_store, SEED_DIR, "kubecon", all_files=True, user_dir=user_dir)
     assert result["updated"] == ["profile.md"] and result["skipped"] == [EU]
+    # Chosen recovery (see the init skill): the update made the store profile current, so repairing the
+    # skipped seed file does not offer it again; raising the seed's seed_version does.
+    shutil.copyfile(SEED_DIR / "kubecon" / EU, seed / EU)
+    edit(seed / EU, lambda meta: meta.update(tracks=["Repaired Track"]))
+    assert kubecon(seeds.status(seeded_store, SEED_DIR, user_dir))["state"] == "current"
+    with pytest.raises(CfpError, match="is not outdated"):
+        seeds.update(seeded_store, SEED_DIR, "kubecon", files=[EU], user_dir=user_dir)
+    edit(seed / "profile.md", lambda meta: meta.update(seed_version="2099-06-01"))
+    retry = seeds.update(seeded_store, SEED_DIR, "kubecon", files=[EU], user_dir=user_dir)
+    assert EU in retry["updated"] and retry["skipped"] == []
 
 
 def test_unreadable_seed_file_missing_from_store_is_not_offered(seeded_store, tmp_path):
@@ -452,3 +462,127 @@ def test_config_init_cli_seeds_user_profiles_and_merges_warnings(tmp_store, tmp_
     )
     assert result["seeded_profiles"] == ["kubecon", "solo-conf"] and result["warnings"] == []
     assert result["user_profiles_dir"] == str(override)
+
+
+def test_case_only_variant_of_a_shipped_name_is_skipped(tmp_path):
+    """On every file system, so init, status, and update agree (on APFS both names are one store folder)."""
+    user_dir = tmp_path / "profiles"
+    user_seed(user_dir, "KubeCon")
+    entries, warnings = seeds.collect(SEED_DIR, user_dir)
+    assert [(e["name"], e["source"]) for e in entries] == [("kubecon", "plugin")]
+    assert warnings == [
+        f"profile folder 'KubeCon' in {user_dir} skipped: it differs from the shipped profile 'kubecon' only in case; "
+        "rename it to 'kubecon' to replace the shipped profile"
+    ]
+
+
+def _case_insensitive(folder):
+    probe = folder / "CaseProbe"
+    probe.mkdir()
+    try:
+        return (folder / "caseprobe").exists()
+    finally:
+        probe.rmdir()
+
+
+def test_seed_with_a_case_alias_in_the_store_is_never_compared_or_written(seeded_store, tmp_path):
+    first = tmp_path / "first"
+    user_seed(first, "acme", version="2026-01-01")
+    from cfplib import config
+
+    config.init_store(seeded_store, {"speaker_name": "A"}, seed_dir=SEED_DIR, user_seed_dir=first)
+    stored = seeded_store / "profiles" / "acme" / "profile.md"
+    before = stored.read_bytes()
+    second = tmp_path / "second"
+    folder = user_seed(second, "ACME")
+    listing, warnings = seeds.status_report(seeded_store, SEED_DIR, second)
+    if not _case_insensitive(seeded_store / "profiles"):
+        assert {s["profile"]: s["state"] for s in listing}["ACME"] == "missing" and warnings == []
+        return
+    expected = (
+        f"profile 'ACME' from {folder} not used: the store already has 'acme', which this file system treats as "
+        "the same folder; rename one of them so the names differ in more than case"
+    )
+    assert [s["profile"] for s in listing] == ["kubecon"] and warnings == [expected]
+    with pytest.raises(CfpError) as info:
+        seeds.update(seeded_store, SEED_DIR, "ACME", all_files=True, user_dir=second)
+    assert str(info.value) == expected
+    assert stored.read_bytes() == before
+    again = config.init_store(seeded_store, {"speaker_name": "A"}, seed_dir=SEED_DIR, user_seed_dir=second)
+    assert again["seeded_profiles"] == [] and again["warnings"] == [expected]
+
+
+def test_update_refuses_a_symlinked_profiles_folder(tmp_path):
+    from cfplib import config
+
+    real = tmp_path / "elsewhere"
+    store_dir = tmp_path / "store"
+    config.init_store(store_dir, {"speaker_name": "A"}, seed_dir=SEED_DIR)
+    shutil.move(str(store_dir / "profiles"), str(real))
+    (store_dir / "profiles").symlink_to(real)
+    age_store_profile(store_dir)
+    before = (real / "kubecon" / "profile.md").read_bytes()
+    with pytest.raises(CfpError, match="contains symlinks"):
+        seeds.update(store_dir, SEED_DIR, "kubecon", all_files=True)
+    assert (real / "kubecon" / "profile.md").read_bytes() == before
+
+
+def test_check_id_rejects_trailing_newline(tmp_path):
+    with pytest.raises(CfpError):
+        store.check_id("foo\n", "profile id")
+    user_dir = tmp_path / "profiles"
+    try:
+        user_seed(user_dir, "acme\n")
+    except OSError:
+        pytest.skip("the file system does not allow a newline in a folder name")
+    entries, warnings = seeds.collect(SEED_DIR, user_dir)
+    assert [e["name"] for e in entries] == ["kubecon"]
+    assert len(warnings) == 1 and "skipped" in warnings[0]
+
+
+def test_update_error_names_personal_profile(seeded_store, tmp_path):
+    user_dir = tmp_path / "profiles"
+    user_seed(user_dir, "kubecon")
+    with pytest.raises(CfpError) as info:
+        seeds.update(seeded_store, SEED_DIR, "kubecon", files=["events/nope.md"], user_dir=user_dir)
+    assert "is not a file of the personal profile 'kubecon'; seed files: profile.md" in str(info.value)
+    age_store_profile(seeded_store)
+    with pytest.raises(CfpError) as info:
+        seeds.update(seeded_store, SEED_DIR, "kubecon", files=["events/nope.md"])
+    assert "is not a file of the shipped profile 'kubecon'" in str(info.value)
+
+
+def test_case_alias_on_any_file_system(tmp_path, monkeypatch):
+    """Host-independent: drive store.case_alias with a faked lookup, so Linux CI covers the alias branch."""
+    import os
+    from pathlib import Path
+
+    folder = tmp_path / "profiles"
+    folder.mkdir()
+    (folder / "acme").mkdir()
+    assert store.case_alias(folder, "acme") is None  # exact name
+    assert store.case_alias(folder, "zeta") is None  # does not exist
+    assert store.case_alias(tmp_path / "missing", "acme") is None  # cannot be listed
+    real_exists = Path.exists
+    monkeypatch.setattr(Path, "exists", lambda self, *a, **k: self.name == "ACME" or real_exists(self, *a, **k))
+    assert store.case_alias(folder, "ACME") == "acme"
+
+    def denied(path):
+        raise PermissionError(13, "denied")
+
+    monkeypatch.setattr(os, "listdir", denied)
+    assert store.case_alias(folder, "ACME") is None
+
+
+def test_alias_is_skipped_and_refused_on_any_file_system(seeded_store, tmp_path, monkeypatch):
+    user_dir = tmp_path / "profiles"
+    folder = user_seed(user_dir, "ACME")
+    before = (seeded_store / "profiles" / "kubecon" / "profile.md").read_bytes()
+    monkeypatch.setattr(store, "case_alias", lambda directory, name: "acme" if name == "ACME" else None)
+    expected = seeds.alias_warning({"name": "ACME", "dir": folder}, "acme")
+    listing, warnings = seeds.status_report(seeded_store, SEED_DIR, user_dir)
+    assert [s["profile"] for s in listing] == ["kubecon"] and warnings == [expected]
+    with pytest.raises(CfpError) as info:
+        seeds.update(seeded_store, SEED_DIR, "ACME", all_files=True, user_dir=user_dir)
+    assert str(info.value) == expected
+    assert (seeded_store / "profiles" / "kubecon" / "profile.md").read_bytes() == before

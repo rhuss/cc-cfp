@@ -96,6 +96,12 @@ def test_config_show_and_init_fail_on_relative_data_dir(tmp_store, run_cli):
     assert not tmp_store.exists()
 
 
+def test_config_show_fails_on_relative_config_dir_even_with_store(tmp_store, run_cli):
+    result = run_cli("config", "show", "--store", tmp_store, env={"CFP_CONFIG_DIR": "rel"}, expect_ok=False)
+    assert result.code == 1 and result["ok"] is False
+    assert "CFP_CONFIG_DIR must be an absolute path, got 'rel'" in result["error"]
+
+
 def test_config_init_fails_on_relative_config_dir_before_writing(tmp_store, run_cli):
     result = run_cli(
         "config", "init", "--store", tmp_store, "--speaker-name", "A", "--seed-dir", SEED_DIR,
