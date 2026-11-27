@@ -54,6 +54,11 @@ validate:
 drift:
   schedule: "17 6 * * 1"
 
+# GitHub Pages (.github/workflows/guide-pages.yml at the repository root). The site is public.
+pages:
+  enabled: true
+  url: https://ro14nd.de/cc-cfp/
+
 upstream:
   target: github
 

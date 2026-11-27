@@ -4,6 +4,7 @@
 # playbook that tools/guide/playbook.py generates from this file instead (build/).
 site:
   title: "cc-cfp"
+  url: https://ro14nd.de/cc-cfp
   start_page: guide::index.adoc
 content:
   sources:
