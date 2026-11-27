@@ -1,0 +1,248 @@
+# Upstream findings collected by cc-guide runs; file them with /guide:upstream.
+findings:
+- id: UF-1
+  source: cfp
+  kind: missing-doc
+  locations:
+  - ref: README.md:29
+    quote: Set `CFP_STORE` to point a session at a second store without rewriting
+      the config file
+  - ref: cfp/skills/init/SKILL.md:54
+    quote: writes `~/.config/cc-cfp/config.json`
+  - ref: cfp/scripts/cfplib/config.py:168
+    quote: write_user_config(store)
+  summary: The README presents CFP_STORE as the way to use a second store but does
+    not say that creating that store with /cfp:init rewrites the user config and makes
+    it the default store.
+  evidence: README.md:29 says CFP_STORE points a session at a second store without
+    rewriting the config file, but a second store can only be created through /cfp:init
+    (cfp/skills/init/SKILL.md:47-54), and config init always calls write_user_config
+    (cfp/scripts/cfplib/config.py:168, defined at config.py:39-45), which overwrites
+    the store entry in ~/.config/cc-cfp/config.json.
+  status: collected
+- id: UF-2
+  source: cfp
+  kind: doc-drift
+  locations:
+  - ref: cfp/skills/committee-review/SKILL.md:40
+    quote: every value is a number from 0 to `packet.rubric.scale_max` in whole or
+      half steps
+  - ref: cfp/scripts/cfplib/review.py:109-110
+    quote: 'if value < 0 or value > scale_max:'
+  summary: The committee review contract requires scores in whole or half steps, but
+    review record only checks the 0 to scale_max range and stores any other number.
+  evidence: cfp/skills/committee-review/SKILL.md:40 requires whole or half steps,
+    while _validate in cfp/scripts/cfplib/review.py:107-111 checks only the type and
+    the 0 to scale_max range, so a score such as 3.3 passes review record.
+  status: collected
+- id: UF-3
+  source: cfp
+  kind: doc-drift
+  locations:
+  - ref: cfp/skills/status/SKILL.md:35
+    quote: when any draft or ready proposal has a closed CFP, a reminder that it can
+      be reopened
+  - ref: cfp/skills/status/SKILL.md:57
+    quote: If it is not `rejected` or `withdrawn`, warn that reopening is meant for
+      rejected or withdrawn proposals
+  summary: The status list suggests reopening draft or ready proposals whose CFP closed,
+    but the reopen subaction warns for any status other than rejected or withdrawn.
+  evidence: cfp/skills/status/SKILL.md:35 points draft and ready proposals at /cfp:status
+    reopen, and cfp/skills/status/SKILL.md:57 then warns that reopen is meant for
+    rejected or withdrawn proposals and asks whether to continue anyway (also :3 and
+    :20).
+  status: collected
+- id: UF-4
+  source: cfp
+  kind: doc-drift
+  locations:
+  - ref: cfp/skills/profile/SKILL.md:29
+    quote: Write only after the user approved the section the data belongs to.
+  - ref: cfp/skills/profile/SKILL.md:103
+    quote: 'with `"approved": false` and run'
+  summary: The profile skill's hard limit says to write only after the user approved
+    a section, but refresh Step 3 writes the event override before presenting any
+    section.
+  evidence: cfp/skills/profile/SKILL.md:29 forbids writes before section approval,
+    while cfp/skills/profile/SKILL.md:103 runs event write with approved false first
+    and only then presents the override sections for approval.
+  status: collected
+- id: UF-5
+  source: cfp
+  kind: stale-reference
+  locations:
+  - ref: cfp/knowledge-base/profiles/kubecon/profile.md:150
+    quote: The benefits field feeds this criterion.
+  summary: The KubeCon Relevance criterion still names the benefits field, which the
+    shipped profile replaced with value_to_community.
+  evidence: cfp/knowledge-base/profiles/kubecon/profile.md:150 says the benefits field
+    feeds Relevance, while the same profile defines value_to_community as the reviewer-only
+    field (profile.md:65) and its notes record benefits replaced by value_to_community
+    (profile.md:235).
+  status: collected
+- id: UF-6
+  source: cfp
+  kind: bug
+  locations:
+  - ref: cfp/skills/profile/SKILL.md:110
+    quote: of the event JSON and run `event write` again
+  - ref: cfp/scripts/cfplib/profile.py:432-434
+    quote: meta["approved"] = bool(data.get("approved", False))
+  summary: Choosing edition only in profile refresh rewrites an already approved event
+    override with approved false and the skill has no step that approves it again.
+  evidence: cfp/skills/profile/SKILL.md:103 approves the event at the end of Step
+    3 and :179 says refresh always writes approved false; the edition only branch
+    at cfp/skills/profile/SKILL.md:110 then runs event write again, and write_event_from_json
+    takes approval from the JSON (cfp/scripts/cfplib/profile.py:432-434), so the event
+    ends unapproved while Step 5 (:117-119) only reports the status.
+  status: collected
+- id: UF-7
+  source: cfp
+  kind: doc-drift
+  locations:
+  - ref: cfp/skills/profile/SKILL.md:157
+    quote: Free prose the draft skill reads.
+  - ref: cfp/skills/draft/SKILL.md:110
+    quote: Iterate `fields` from `profile show` in order.
+  summary: The profile skill says the draft skill reads the Drafting guidance section,
+    but the draft skill never refers to it.
+  evidence: cfp/skills/profile/SKILL.md:157 describes Drafting guidance as prose the
+    draft skill reads, while cfp/skills/draft/SKILL.md (for example :96, :110, :115)
+    uses only per-field guidance and the guidance files; the section reaches only
+    the committee reviewer through the review packet (cfp/scripts/cfplib/review.py:73).
+  status: collected
+- id: UF-8
+  source: cfp
+  kind: doc-drift
+  locations:
+  - ref: cfp/scripts/cfp_store.py:6-7
+    quote: Every invocation prints exactly one JSON object on stdout (except
+  - ref: cfp/scripts/cfp_store.py:81
+    quote: parser = JsonArgumentParser(prog="cfp_store.py", parents=[common], description=__doc__)
+  summary: The CLI docstring promises exactly one JSON object per invocation, but
+    --help on any level prints plain argparse help text.
+  evidence: cfp/scripts/cfp_store.py:6-7 names pasteview markdown as the only exception,
+    while the parsers built at cfp_store.py:81-96 keep argparse's default -h, which
+    prints usage text and exits 0; the usage error at cfp_store.py:587 even sends
+    callers to --help.
+  status: collected
+- id: UF-9
+  source: cfp
+  kind: stale-reference
+  locations:
+  - ref: cfp/knowledge-base/templates/proposal.md:21-23
+    quote: 'review_rounds: []'
+  - ref: cfp/scripts/cfplib/proposals.py:34
+    quote: '"review_stale": False,'
+  summary: The proposal template lacks the review_stale key that PROPOSAL_DEFAULTS
+    defines.
+  evidence: cfp/knowledge-base/templates/proposal.md:1-24 lists every front matter
+    key except review_stale, which cfp/scripts/cfplib/proposals.py:12-36 includes
+    in PROPOSAL_DEFAULTS and the draft resume logic reads (cfp/skills/draft/SKILL.md:222);
+    load_proposal fills the default, so it has no runtime effect.
+  status: collected
+- id: UF-10
+  source: cfp
+  kind: doc-drift
+  locations:
+  - ref: cfp/knowledge-base/profiles/kubecon/profile.md:172
+    quote: Downgraded to a warning when the previously-presented field explains the
+      differences.
+  - ref: cfp/skills/check/SKILL.md:86
+    quote: explaining significant differences turns the rule into a warning
+  - ref: cfp/scripts/cfplib/preflight.py:119-120
+    quote: severity = "warn" if note else rule.get("severity", "disqualify")
+  summary: The repeat rule text says only a note that explains the differences downgrades
+    the finding, but pre-flight downgrades it for any non-empty note.
+  evidence: cfp/knowledge-base/profiles/kubecon/profile.md:172 and cfp/skills/check/SKILL.md:86
+    tie the downgrade to a note explaining significant differences, while cfp/scripts/cfplib/preflight.py:119-120
+    sets severity warn whenever the note field has any text.
+  status: collected
+- id: UF-11
+  source: cfp
+  kind: naming-ux
+  locations:
+  - ref: cfp/commands/profile.md:3
+    quote: 'argument-hint: "[new <name or URL> | refresh <id> [--event <id>] [--screenshots
+      <paths>] | show <id> | list]"'
+  - ref: cfp/skills/profile/SKILL.md:18-20
+    quote: '`new <conference name or CFP URL> [--event <id or URL>] [--screenshots
+      <path,...>]`'
+  summary: 'The /cfp:profile argument hint omits options the skill accepts: --event
+    and --screenshots with new, and --event with show.'
+  evidence: cfp/commands/profile.md:3 (and the skill's own hint at cfp/skills/profile/SKILL.md:4)
+    shows new and show without options, while the argument table at cfp/skills/profile/SKILL.md:18-20
+    accepts --event and --screenshots with new and --event with show.
+  status: collected
+- id: UF-12
+  source: cfp
+  kind: doc-drift
+  locations:
+  - ref: README.md:41
+    quote: reopen a rejected proposal for another event
+  - ref: cfp/skills/status/SKILL.md:20
+    quote: Start a new draft from a rejected or withdrawn proposal
+  summary: The README says reopen is for rejected proposals, while the status skill
+    reopens rejected or withdrawn ones.
+  evidence: README.md:41 names only rejected proposals, while cfp/skills/status/SKILL.md:20
+    and :57 treat rejected and withdrawn proposals as the intended sources of a reopen.
+  status: collected
+- id: UF-13
+  source: cfp
+  kind: missing-doc
+  locations:
+  - ref: README.md:40
+    quote: '`cfp:committee-review --proposal <id>` (skill)'
+  - ref: cfp/skills/committee-review/SKILL.md:4
+    quote: 'argument-hint: "--proposal <id> [--examples <n>]"'
+  summary: The README command table omits the --examples option of cfp:committee-review.
+  evidence: README.md:40 lists only --proposal, while cfp/skills/committee-review/SKILL.md:4
+    and :12 accept --examples <n> for the number of calibration examples (default
+    3).
+  status: collected
+- id: UF-14
+  source: cfp
+  kind: doc-drift
+  locations:
+  - ref: cfp/scripts/cfplib/text.py:21-23
+    quote: Hand-edited profiles can carry limits like ``"75"`` or ``"n/a"``; those
+      must
+  - ref: cfp/scripts/cfplib/text.py:28
+    quote: number = int(str(value).strip())
+  summary: The coerce_limit docstring groups the string 75 with values that count
+    as no limit, but the code converts it to the limit 75.
+  evidence: cfp/scripts/cfplib/text.py:21-23 says hand-edited values like "75" or
+    "n/a" count as no limit, while cfp/scripts/cfplib/text.py:28-31 parses "75" to
+    75 and enforces it; profile validate still reports the string as a problem (cfp/scripts/cfplib/profile.py:294-295).
+  status: collected
+- id: UF-15
+  source: cfp
+  kind: naming-ux
+  locations:
+  - ref: cfp/skills/_shared/preflight-checks.md:48
+    quote: '`cannot tell`: the rule depends on something the store does not hold'
+  - ref: cfp/skills/_shared/preflight-checks.md:61
+    quote: (`violated`, `met`, `does not apply`, `confirm yourself`)
+  - ref: cfp/skills/check/SKILL.md:61
+    quote: or `confirm yourself` (the store does not hold what the rule needs)
+  summary: The same custom rule verdict is called cannot tell when it is reached and
+    confirm yourself when it is reported.
+  evidence: cfp/skills/_shared/preflight-checks.md:48-51 defines and uses the verdict
+    cannot tell, while the report lines at cfp/skills/_shared/preflight-checks.md:61
+    and cfp/skills/check/SKILL.md:61 name it confirm yourself.
+  status: collected
+- id: UF-16
+  source: cfp
+  kind: stale-reference
+  locations:
+  - ref: cfp/knowledge-base/guidance/benefits-field.md:71
+    quote: '(KubeCon: historically 1,000 characters, unverified)'
+  - ref: cfp/knowledge-base/profiles/kubecon/profile.md:73
+    quote: No character limit shown on the form.
+  summary: The relevance field guidance still checks KubeCon texts against the historic
+    1,000 character limit, while the shipped profile shows no limit for value_to_community.
+  evidence: cfp/knowledge-base/guidance/benefits-field.md:71 (and the example at :47)
+    cite a 1,000 character KubeCon limit, while cfp/knowledge-base/profiles/kubecon/profile.md:69-73
+    gives value_to_community an empty limit confirmed from a screenshot and notes
+    no character limit is shown.
+  status: collected
