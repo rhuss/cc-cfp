@@ -131,7 +131,9 @@ The skills see a block in this shape:
 
 The script's own documentation states that it never exits non-zero for a `/cfp:` prompt.
 A missing or malformed config file simply leads to the default store.
-An invalid `CFP_STORE`, `CFP_CONFIG_DIR`, or `CFP_DATA_DIR` yields an empty store path and a `<store-error>` instead of a failed hook.
+When resolution reaches an invalid `CFP_STORE`, `CFP_CONFIG_DIR`, or `CFP_DATA_DIR`, the store path is empty and `<store-error>` carries the message instead of a failed hook.
+Resolution stops at the first step that yields a store, so a valid `CFP_STORE` hides a broken `CFP_CONFIG_DIR` or `CFP_DATA_DIR`.
+A store whose `config.md` can't be read, for example because of folder permissions, is reported the same way.
 The values are XML-escaped, so a `&` in a path arrives as `&amp;`.
 
 == Command files

@@ -168,6 +168,9 @@ Setup always writes to the config folder.
 
 Conference profiles that cfp doesn't ship go into `<data folder>/profiles/<id>/`, in the same format as the shipped profile: a folder with `profile.md` and optional `events/` and `examples/` folders.
 A folder without `profile.md` is skipped.
+The folder name is the profile id, so it must start with a letter or digit and use only letters, digits, `.`, `_`, and `-`; `/cfp:init` skips other folders with a warning.
+A profile whose `profile.md` can't be read is skipped with a warning that names the file, and the next `/cfp:init` run copies it once you've fixed it.
+Symlinked folders and a symlinked `profile.md` are copied as regular files, and symlinked event or example files are skipped, so the store never writes back into your own files.
 `/cfp:init` copies your profiles into a new store next to the shipped ones, and its update check compares the store copy with your profile.
 `cfp` never creates this folder, so create it yourself when you need it.
 

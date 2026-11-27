@@ -133,7 +133,8 @@ Without `--store`, the store is the one cfp resolves, by default `<data folder>/
 Creates the store folder with missing parents, its subfolders and `config.md`, and copies every seed profile from `--seed-dir` and from the personal profiles folder that the store does not have yet and marks it approved.
 Without a default profile, it takes the first profile id in sort order.
 It also writes the store path to `config.json` in the config folder, named in `config_write_path`.
-`warnings` lists personal profiles that replace shipped ones and, when `CFP_STORE` names another store, that the variable overrides the saved store in later sessions.
+`warnings` lists personal profiles that replace shipped ones, personal profile folders skipped because of an invalid name or an unreadable `profile.md`, and, when `CFP_STORE` names another store or is invalid, what that means for later sessions.
+A personal profile is copied as regular files; symlinked event or example files in it are skipped.
 Fails on an invalid `CFP_DATA_DIR` or `CFP_CONFIG_DIR` before it writes anything.
 
 |`set`

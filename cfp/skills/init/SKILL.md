@@ -15,7 +15,7 @@ If `$ARGUMENTS` contains `--store <path>`, use it without asking.
 
 If `<store-initialized>` is already `true`, show the current store path from `<store>` and ask (AskUserQuestion) one of:
 
-- `keep it as it is`: no setting changes. Skip Steps 2 to 5 and continue with Step 6, which checks the shipped profiles.
+- `keep it as it is`: no setting changes. Run `python3 -I "$PLUGIN_ROOT/scripts/cfp_store.py" config show --store "<store path>"` and keep `config_write_path` and `user_profiles_dir` for Step 7. Skip Steps 2 to 5 and continue with Step 6, which checks the seed profiles (shipped and personal).
 - `re-run setup on it`: Steps 2 to 5 update the values; all data is kept.
 - `use a different path`: ask for the path, then continue with Step 2.
 
@@ -53,10 +53,13 @@ python3 -I "$PLUGIN_ROOT/scripts/cfp_store.py" config init \
 
 Omit `--speaker-company` and `--voice-profile` when empty. The command creates the store folder (with missing parents), `profiles/`, `talks/`, `proposals/`, `bios/`, `resources/`, writes `<store>/config.md`, saves the store path in the config file named by `config_write_path` in the result, and copies every seed profile that is not already in the store (seeded profiles are marked approved so drafting works immediately). Seeds come from the shipped profiles and from the user's personal profiles in `user_profiles_dir`; the command finds that folder itself, and a missing folder is fine. It never overwrites a profile that is already there; Step 6 handles those.
 
-Keep the `warnings` of the result for this run and show each one once. Two kinds can appear:
+Keep the `warnings` of the result for this run and show each one once. These kinds can appear:
 
 - `CFP_STORE is set to ... and overrides the saved store ...`: tell the user to remove or change the variable if the chosen path should win.
+- `CFP_STORE must be an absolute path, ...`: the variable is broken; tell the user to fix or unset it, because later commands fail until then.
 - `profile '<name>': using <user folder> instead of the shipped <plugin folder>`: a personal profile replaces the shipped one of the same name. Step 6 reports the same clash again; show it only once per run (de-duplicate by profile name).
+- `profile folder '<name>' in <user folder> skipped: ...`: the folder name is not a valid profile id; tell the user to rename the folder.
+- `profile '<name>' from <user folder> skipped: ...`: the personal profile could not be read (the message names the file); tell the user to fix it and run `/cfp:init` again, which then copies it.
 
 On `"ok": false`, show the error and ask whether to try a different path.
 
@@ -82,7 +85,7 @@ The result has `seeds` and `warnings`. Show each entry of `warnings` that Step 5
 For an outdated profile:
 
 1. Say which seed is newer than the copy in the store, with both versions (`store_version` to `seed_version`): "the shipped `<profile>` profile" for `source: plugin`, "your personal `<profile>` profile in `<seed_dir>`" for `source: user`.
-2. For every entry in `files` with the state `changed`, print its path and then its `diff` in full in a fenced `diff` block. Explain once how to read it: lines starting with `-` are in the store now and would be replaced, lines starting with `+` come with the seed file (labeled `shipped/` or `user/`). Then list the files with the state `missing` (shipped files the store does not have). Files with the state `same` need nothing.
+2. For every entry in `files` with the state `changed`, print its path and then its `diff` in full in a fenced `diff` block. Explain once how to read it: lines starting with `-` are in the store now and would be replaced, lines starting with `+` come with the seed file (labeled `shipped/` or `user/`). Then list the files with the state `missing` (seed files, shipped or personal, that the store does not have). Files with the state `same` need nothing.
 3. Ask (AskUserQuestion) what to do:
    - `update everything shown`: offer it only when a file other than `profile.md` is changed or missing.
    - `update the profile only`: `profile.md` is replaced, the other files stay as they are.
