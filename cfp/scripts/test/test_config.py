@@ -163,3 +163,48 @@ def test_require_store_checks_config_file(tmp_store, tmp_home):
         config.require_store(tmp_store)
     config.init_store(tmp_store, {"speaker_name": "A"}, seed_dir=None)
     assert config.require_store(tmp_store) == Path(tmp_store)
+
+
+def _user_seed(user_dir, name, version):
+    import shutil
+
+    from cfplib import frontmatter
+
+    target = user_dir / name
+    shutil.copytree(SEED_DIR / "kubecon", target)
+    meta, body = frontmatter.load(target / "profile.md")
+    meta["id"] = name
+    meta["approved"] = False
+    if version is None:
+        meta.pop("seed_version", None)
+    else:
+        meta["seed_version"] = version
+    frontmatter.save(target / "profile.md", meta, body)
+    return target
+
+
+def test_init_store_seeds_user_profiles(tmp_store, tmp_home, tmp_path):
+    from cfplib import frontmatter, seeds
+
+    user_dir = tmp_path / "profiles"
+    _user_seed(user_dir, "acme-summit", "2026-01-01")
+    _user_seed(user_dir, "kubecon", "2099-01-01")
+    _user_seed(user_dir, "no-version", None)
+    result = config.init_store(tmp_store, {"speaker_name": "A"}, seed_dir=SEED_DIR, user_seed_dir=user_dir)
+    assert result["seeded_profiles"] == ["kubecon", "acme-summit", "no-version"]
+    assert result["warnings"] == [
+        f"profile 'kubecon': using {user_dir / 'kubecon'} instead of the shipped {SEED_DIR / 'kubecon'}"
+    ]
+    for name in ("acme-summit", "kubecon", "no-version"):
+        assert frontmatter.load(tmp_store / "profiles" / name / "profile.md")[0]["approved"] is True
+    assert frontmatter.load(tmp_store / "profiles" / "kubecon" / "profile.md")[0]["seed_version"] == "2099-01-01"
+    states = {s["profile"]: s["state"] for s in seeds.status(tmp_store, SEED_DIR, user_dir)}
+    assert states == {"kubecon": "current", "acme-summit": "current", "no-version": "local"}
+
+
+def test_init_store_missing_user_dir_or_none_is_silent(tmp_store, tmp_home, tmp_path):
+    result = config.init_store(tmp_store, {"speaker_name": "A"}, seed_dir=SEED_DIR, user_seed_dir=tmp_path / "missing")
+    assert result["seeded_profiles"] == ["kubecon"] and result["warnings"] == []
+    assert not (tmp_path / "missing").exists()
+    result = config.init_store(tmp_store, {"speaker_name": "A"}, seed_dir=SEED_DIR)
+    assert result["seeded_profiles"] == [] and result["warnings"] == []

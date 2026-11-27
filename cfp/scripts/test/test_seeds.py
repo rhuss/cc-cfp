@@ -45,7 +45,10 @@ def diverge(s):
 
 def test_status_is_current_right_after_init(seeded_store):
     info = kubecon(seeds.status(seeded_store, SEED_DIR))
-    assert info == {"profile": "kubecon", "state": "current", "store_version": SHIPPED, "seed_version": SHIPPED, "files": []}
+    assert info == {
+        "profile": "kubecon", "state": "current", "store_version": SHIPPED, "seed_version": SHIPPED, "files": [],
+        "source": "plugin", "seed_dir": str(SEED_DIR / "kubecon"),
+    }
 
 
 def test_status_local_newer_missing_and_unreadable(seeded_store, tmp_path):
@@ -96,6 +99,7 @@ def test_update_replaces_the_profile_only_by_default_and_keeps_its_approval(seed
     assert result == {
         "profile": "kubecon", "from_version": OLD, "to_version": SHIPPED,
         "updated": ["profile.md"], "added": [], "skipped": [EU, EXAMPLE],
+        "source": "plugin", "warnings": [],
     }
     prof = profile.load_profile(s, "kubecon")
     assert prof["seed_version"] == SHIPPED and prof["approved"] is False
@@ -165,3 +169,198 @@ def test_seed_cli(seeded_store, run_cli):
     updated = run_cli("profile", "seed-update", "--profile", "kubecon", "--seed-dir", SEED_DIR, "--files", f"{EU},{EXAMPLE}")
     assert updated["updated"] == ["profile.md", EU] and updated["added"] == [EXAMPLE] and updated["to_version"] == SHIPPED
     assert run_cli("profile", "seed-status", "--seed-dir", SEED_DIR)["seeds"][0]["state"] == "current"
+
+
+# ---------------------------------------------------------------- personal seed profiles (feature 002)
+
+LATER = "2099-01-01"
+
+
+def user_seed(user_dir, name, version=LATER, marker=None):
+    """Copy the shipped kubecon seed to <user_dir>/<name> with its own id and seed_version."""
+    target = user_dir / name
+    shutil.copytree(SEED_DIR / "kubecon", target)
+
+    def change(meta):
+        meta["id"] = name
+        if version is None:
+            meta.pop("seed_version", None)
+        else:
+            meta["seed_version"] = version
+        if marker:
+            meta["name"] = marker
+
+    edit(target / "profile.md", change)
+    return target
+
+
+def clash_warning(user_dir, suffix=""):
+    return f"profile 'kubecon': using {user_dir / 'kubecon'} instead of the shipped {SEED_DIR / 'kubecon'}{suffix}"
+
+
+NO_VERSION = "; it has no seed_version, so it will not replace an existing store copy"
+
+
+def test_collect_plugin_only_and_missing_user_dir(tmp_path):
+    expected = [{"name": "kubecon", "dir": SEED_DIR / "kubecon", "source": "plugin"}]
+    assert seeds.collect(SEED_DIR) == (expected, [])
+    assert seeds.collect(SEED_DIR, tmp_path / "missing") == (expected, [])
+    with pytest.raises(CfpError, match="seed directory not found"):
+        seeds.collect(tmp_path / "nope", tmp_path)
+
+
+def test_collect_adds_user_profiles_and_skips_folders_without_profile(tmp_path):
+    user_dir = tmp_path / "profiles"
+    user_seed(user_dir, "acme-summit")
+    (user_dir / "notes").mkdir()
+    (user_dir / "notes" / "readme.md").write_text("no profile here")
+    (user_dir / "stray.md").write_text("a file, not a folder")
+    entries, warnings = seeds.collect(SEED_DIR, user_dir)
+    assert entries == [
+        {"name": "kubecon", "dir": SEED_DIR / "kubecon", "source": "plugin"},
+        {"name": "acme-summit", "dir": user_dir / "acme-summit", "source": "user"},
+    ]
+    assert warnings == []
+
+
+def test_collect_user_profile_replaces_shipped_one_with_warning(tmp_path):
+    user_dir = tmp_path / "profiles"
+    user_seed(user_dir, "kubecon")
+    entries, warnings = seeds.collect(SEED_DIR, user_dir)
+    assert entries == [{"name": "kubecon", "dir": user_dir / "kubecon", "source": "user"}]
+    assert warnings == [clash_warning(user_dir)]
+
+
+def test_collect_variant_without_seed_version_says_so(tmp_path):
+    user_dir = tmp_path / "profiles"
+    user_seed(user_dir, "kubecon", version=None)
+    assert seeds.collect(SEED_DIR, user_dir)[1] == [clash_warning(user_dir, NO_VERSION)]
+
+
+def test_status_report_marks_source_and_folder(seeded_store, tmp_path):
+    user_dir = tmp_path / "profiles"
+    user_seed(user_dir, "acme-summit")
+    listing = seeds.status(seeded_store, SEED_DIR, user_dir)
+    assert isinstance(listing, list)
+    by_name = {seed["profile"]: seed for seed in listing}
+    assert by_name["kubecon"]["source"] == "plugin" and by_name["kubecon"]["seed_dir"] == str(SEED_DIR / "kubecon")
+    assert by_name["acme-summit"]["source"] == "user" and by_name["acme-summit"]["seed_dir"] == str(user_dir / "acme-summit")
+    assert by_name["acme-summit"]["state"] == "missing"
+    report, warnings = seeds.status_report(seeded_store, SEED_DIR, user_dir)
+    assert report == listing and warnings == []
+
+
+def test_variant_without_seed_version_never_replaces_versioned_copy(seeded_store, tmp_path):
+    user_dir = tmp_path / "profiles"
+    user_seed(user_dir, "kubecon", version=None)
+    report, warnings = seeds.status_report(seeded_store, SEED_DIR, user_dir)
+    info = kubecon(report)
+    assert info["state"] == "current" and info["source"] == "user"
+    assert warnings == [clash_warning(user_dir, NO_VERSION)]
+    with pytest.raises(CfpError, match="not outdated"):
+        seeds.update(seeded_store, SEED_DIR, "kubecon", user_dir=user_dir)
+
+
+def test_user_seed_later_version_is_outdated_and_updates(seeded_store, tmp_path):
+    user_dir = tmp_path / "profiles"
+    user_seed(user_dir, "kubecon", version=LATER, marker="My KubeCon")
+    info = kubecon(seeds.status(seeded_store, SEED_DIR, user_dir))
+    assert info["state"] == "outdated" and info["store_version"] == SHIPPED and info["seed_version"] == LATER
+    profile_diff = next(entry for entry in info["files"] if entry["path"] == "profile.md")["diff"]
+    assert profile_diff.startswith("--- store/profile.md\n+++ user/profile.md\n")
+    result = seeds.update(seeded_store, SEED_DIR, "kubecon", user_dir=user_dir)
+    assert result["source"] == "user" and result["to_version"] == LATER
+    assert result["warnings"] == [clash_warning(user_dir)]
+    prof = profile.load_profile(seeded_store, "kubecon")
+    assert prof["name"] == "My KubeCon" and prof["seed_version"] == LATER and prof["approved"] is True
+    assert kubecon(seeds.status(seeded_store, SEED_DIR, user_dir))["state"] == "current"
+
+
+def test_user_seed_lower_version_is_newer_and_refused(seeded_store, tmp_path):
+    user_dir = tmp_path / "profiles"
+    user_seed(user_dir, "kubecon", version="2000-01-01")
+    info = kubecon(seeds.status(seeded_store, SEED_DIR, user_dir))
+    assert info["state"] == "newer" and info["source"] == "user"
+    with pytest.raises(CfpError, match="not outdated"):
+        seeds.update(seeded_store, SEED_DIR, "kubecon", user_dir=user_dir)
+
+
+def test_update_user_only_profile_and_unknown_name(seeded_store, tmp_path):
+    from cfplib import config
+
+    user_dir = tmp_path / "profiles"
+    user_seed(user_dir, "acme-summit", version="2026-01-01")
+    config.init_store(seeded_store, {"speaker_name": "A"}, seed_dir=SEED_DIR, user_seed_dir=user_dir)
+    edit(user_dir / "acme-summit" / "profile.md", lambda meta: meta.update(seed_version="2026-06-01"))
+    result = seeds.update(seeded_store, SEED_DIR, "acme-summit", user_dir=user_dir)
+    assert result["source"] == "user" and result["from_version"] == "2026-01-01" and result["to_version"] == "2026-06-01"
+    with pytest.raises(CfpError) as info:
+        seeds.update(seeded_store, SEED_DIR, "nope", user_dir=user_dir)
+    assert str(info.value) == f"no seed profile 'nope' in {SEED_DIR} or {user_dir}"
+
+
+def test_seed_cli_with_user_profiles(seeded_store, run_cli, tmp_path):
+    user_dir = tmp_path / "profiles"
+    user_seed(user_dir, "kubecon", version=LATER)
+    user_seed(user_dir, "acme-summit")
+    status = run_cli("profile", "seed-status", "--seed-dir", SEED_DIR, "--user-seed-dir", user_dir)
+    assert set(status.data) == {"ok", "seeds", "warnings"}
+    assert status["warnings"] == [clash_warning(user_dir)]
+    by_name = {seed["profile"]: seed for seed in status["seeds"]}
+    assert by_name["kubecon"]["state"] == "outdated" and by_name["kubecon"]["source"] == "user"
+    assert by_name["acme-summit"]["state"] == "missing"
+
+    updated = run_cli("profile", "seed-update", "--profile", "kubecon", "--seed-dir", SEED_DIR, "--user-seed-dir", user_dir)
+    assert updated["source"] == "user" and updated["warnings"] == [clash_warning(user_dir)]
+
+    unknown = run_cli(
+        "profile", "seed-update", "--profile", "nope", "--seed-dir", SEED_DIR, "--user-seed-dir", user_dir, expect_ok=False
+    )
+    assert unknown.code == 1 and unknown["error"] == f"no seed profile 'nope' in {SEED_DIR} or {user_dir}"
+
+
+def test_seed_cli_reads_default_user_profiles_dir(seeded_store, run_cli, tmp_home):
+    user_dir = tmp_home / ".local" / "share" / "cc-cfp" / "profiles"
+    user_seed(user_dir, "acme-summit")
+    status = run_cli("profile", "seed-status", "--seed-dir", SEED_DIR)
+    assert [seed["profile"] for seed in status["seeds"]] == ["kubecon", "acme-summit"]
+    assert status["seeds"][1]["seed_dir"] == str(user_dir / "acme-summit") and status["warnings"] == []
+    plain = run_cli("profile", "seed-status", "--seed-dir", SEED_DIR, env={"CFP_DATA_DIR": str(seeded_store.parent / "none")})
+    assert [seed["profile"] for seed in plain["seeds"]] == ["kubecon"]
+
+
+def test_seed_cli_fails_on_relative_data_dir(seeded_store, run_cli):
+    for args in (
+        ("profile", "seed-status", "--seed-dir", SEED_DIR),
+        ("profile", "seed-update", "--profile", "kubecon", "--seed-dir", SEED_DIR),
+    ):
+        result = run_cli(*args, env={"CFP_DATA_DIR": "rel"}, expect_ok=False)
+        assert result.code == 1 and "CFP_DATA_DIR must be an absolute path, got 'rel'" in result["error"]
+
+
+def test_config_init_cli_seeds_user_profiles_and_merges_warnings(tmp_store, tmp_home, run_cli, tmp_path):
+    user_dir = tmp_home / ".local" / "share" / "cc-cfp" / "profiles"
+    user_seed(user_dir, "acme-summit")
+    user_seed(user_dir, "kubecon", marker="My KubeCon")
+    other = tmp_path / "other"
+    result = run_cli(
+        "config", "init", "--store", tmp_store, "--speaker-name", "A", "--seed-dir", SEED_DIR,
+        env={"CFP_STORE": str(other)},
+    )
+    assert result["seeded_profiles"] == ["kubecon", "acme-summit"]
+    assert result["warnings"] == [
+        clash_warning(user_dir),
+        f"CFP_STORE is set to '{other}' and overrides the saved store '{tmp_store.resolve()}' in later sessions",
+    ]
+    assert profile.load_profile(tmp_store, "kubecon")["name"] == "My KubeCon"
+    assert profile.load_profile(tmp_store, "acme-summit")["approved"] is True
+
+    override = tmp_path / "override"
+    user_seed(override, "solo-conf")
+    fresh = tmp_path / "fresh"
+    result = run_cli(
+        "config", "init", "--store", fresh, "--speaker-name", "A", "--seed-dir", SEED_DIR, "--user-seed-dir", override,
+        env={"CFP_STORE": None},
+    )
+    assert result["seeded_profiles"] == ["kubecon", "solo-conf"] and result["warnings"] == []
+    assert result["user_profiles_dir"] == str(override)

@@ -12,7 +12,7 @@ import json
 import shutil
 from pathlib import Path
 
-from cfplib import CfpError, frontmatter, paths
+from cfplib import CfpError, frontmatter, paths, seeds
 
 STORE_DIRS = ("profiles", "talks", "proposals", "bios", "resources")
 DEFAULT_STORE_CONFIG = {
@@ -129,8 +129,14 @@ def _seed_profile(seed_profile_dir, target_dir):
         frontmatter.save(profile_file, meta, body)
 
 
-def init_store(store, values, seed_dir=None):
-    """Create the folder tree, config.md, user config, and seed profiles."""
+def init_store(store, values, seed_dir=None, user_seed_dir=None):
+    """Create the folder tree, config.md, user config, and seed profiles.
+
+    Seeds come from the plugin's ``seed_dir`` and the user's own
+    ``user_seed_dir`` (``None`` means no user source, a missing folder is an
+    empty one). A user profile replaces a shipped one of the same name; the
+    result lists one warning per such clash.
+    """
     store = Path(store).expanduser().resolve()
     created = []
     for sub in ("",) + STORE_DIRS:
@@ -145,19 +151,14 @@ def init_store(store, values, seed_dir=None):
         created.append(str(config_file))
 
     seeded = []
-    if seed_dir:
-        seed_dir = Path(seed_dir)
-        if not seed_dir.is_dir():
-            raise CfpError(f"seed directory not found: {seed_dir}")
-        for entry in sorted(seed_dir.iterdir()):
-            if not entry.is_dir() or not (entry / "profile.md").is_file():
-                continue
-            target = store / "profiles" / entry.name
-            if target.exists():
-                continue
-            _seed_profile(entry, target)
-            seeded.append(entry.name)
-            created.append(str(target))
+    entries, warnings = seeds.collect(seed_dir or None, user_seed_dir)
+    for entry in entries:
+        target = store / "profiles" / entry["name"]
+        if target.exists():
+            continue
+        _seed_profile(entry["dir"], target)
+        seeded.append(entry["name"])
+        created.append(str(target))
 
     current = load_store_config(store)
     if not current.get("default_profile"):
@@ -171,4 +172,5 @@ def init_store(store, values, seed_dir=None):
         "created": created,
         "seeded_profiles": seeded,
         "config_write_path": str(config_write_path),
+        "warnings": warnings,
     }
