@@ -6,7 +6,7 @@ A profile turns public CFP pages, reviewer guideline pages, and submission form 
 
 The schema (the shipped `knowledge-base/profiles/kubecon/profile.md` and `events/kubecon-eu-2027.md` are the live reference) has these parts:
 
-- Family profile: `id`, `name`, `platform`, `sources`, `session_types` (each with `id`, `name`, `duration_min`, `min_speakers`, `max_speakers`, `notes`), `submission_limit`, `selection_limit`, `fields`, `rubric`, `rules`, `rejection_reasons`, `bio_limit`, `bio_limit_status`, and a `## Drafting guidance` body section.
+- Family profile: `id`, `name`, `platform`, `sources`, `session_types` (each with `id`, `name`, `duration_min`, `min_speakers`, `max_speakers`, `notes`), `submission_limit`, `selection_limit`, `fields`, `rubric`, `rules`, `rejection_reasons`, `bio_on_form`, `bio_limit`, `bio_limit_status`, and a `## Drafting guidance` body section.
 - Each field: `id`, `label`, `required`, `kind` (one of `text`, `longtext`, `choice`, `multichoice`, `boolean`, `link`, `resources`), `limit`, `limit_status` (`unverified`, `page`, `screenshot`), `source`, `options` (for choice kinds), `audience` (`public` or `reviewer`), `guidance`.
 - Rubric: `scale_max`, `pass_average`, `pass_min_criterion`, `criteria` (each with `id`, `name`, `description`).
 - Each rule: `id`, `kind` (one of `submission_limit`, `repeat_within_months`, `track_in_event`, `speaker_count`, `all_men_panel`, `multi_company_panel`, `vendor_pitch`, `custom`), `severity`, `params`, `source`, `text`.
@@ -43,6 +43,7 @@ When the user supplies screenshots of the live form (file paths or pasted images
 3. Character limits shown by counters ("0 / 1300") or help text ("max 75 characters").
 4. Option lists for dropdowns and radio groups, verbatim, in the shown order.
 5. Which fields are public versus reviewer-only, when the form or its help text says so.
+6. Whether the form asks for a speaker bio with the submission, and its limit. When the screenshots cover the complete form and show no bio, set `bio_on_form: false` and leave `bio_limit` empty; the draft flow then attaches no bio and the paste view prints none. Without screenshots of the whole form, keep `bio_on_form: true`.
 
 Each item taken from a screenshot gets `limit_status: screenshot` and `source: screenshot:<filename>`. Fields seen in a screenshot but absent from the CFP page are added, with the same source. Ask for the filename if an image was pasted without one and store it as `screenshot:pasted-<n>`.
 
@@ -70,7 +71,7 @@ Present one section at a time, and wait for an answer before moving on. The sect
 2. Fields and limits (label, kind, required, limit, options, audience).
 3. Tracks and dates (for the event override).
 4. Rules and rubric.
-5. Rejection reasons and bio limit.
+5. Rejection reasons and the speaker bio (on the form or not, and its limit).
 
 Each item shows its value and its verification label in brackets, for example `abstract: longtext, required, limit 1300 [unverified]` or `cfp_close: 2026-10-11 CEST [page: https://...]`. After each section ask: approve, edit, or re-research? On edit, apply the change and show the section again. On re-research, go back to the sources for that section only.
 
@@ -90,8 +91,9 @@ Use snake_case ids so the drafting skill can recognize the same field across con
 - `previously_presented`: boolean or text about prior outings of the talk
 - `cncf_oss_projects`: CNCF projects featured plus all other open source projects discussed, with links (older forms split this into `cncf_projects` and `open_source_projects`)
 - `resources`: additional resources such as prior recordings. Use kind `resources` when the form takes a list of links and `longtext` when it has one free-text box; the draft flow fills the field from the stored speaker resources either way
-- `bio`: speaker biography, when the form asks for it per submission
 
 Fields that match none of these get a descriptive snake_case id of their own (for example `learning_outcomes`, `prerequisites`).
+
+The speaker bio is not a field. Record it with the profile keys `bio_on_form`, `bio_limit`, and `bio_limit_status`, never as an entry in `fields`; the draft flow attaches a stored bio variation as its own part.
 
 The draft flow treats exactly one field as the reviewer-only relevance field and writes it with the benefits guidance: `benefits` when the form has a field with that id, otherwise the first field in form order with `audience: reviewer` and `kind: longtext`, not counting `previously_presented` and `resources`. `profile show` reports its id as `relevance_field` (null when the form has none). Every other reviewer-only text field is drafted from its own `guidance`, so give those fields a `guidance` text that says what the form expects.

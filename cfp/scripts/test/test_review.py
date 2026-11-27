@@ -2,7 +2,7 @@
 
 import pytest
 
-from cfplib import CfpError, bios, profile, proposals, review, talks
+from cfplib import CfpError, bios, frontmatter, profile, proposals, review, store, talks
 
 TODAY = "2026-10-09"
 EVENT = "kubecon-eu-2027"
@@ -59,12 +59,21 @@ def test_packet_contents(seeded_store, pid):
     assert packet["relevance_field"] == "value_to_community"
     assert packet["audience_level"] == "Intermediate" and packet["track"] == "Security"
     assert packet["session_type"]["id"] == "session" and packet["session_type"]["duration_min"] == 30
-    assert packet["bio"] == "Bio."
+    assert packet["bio"] == "Bio." and packet["bio_on_form"] is True
     assert packet["resources"] == [{"id": "rec", "type": "recording", "title": "Rec", "link": "https://r"}]
     assert packet["talk"]["title"] == "T" and packet["talk"]["personas"] == ["SREs"]
     assert "drafting_guidance" in packet and packet["round"] == 1
     fewer = review.packet(seeded_store, pid, examples=1)["packet"]
     assert len(fewer["examples"]) == 1
+
+
+def test_packet_carries_no_bio_when_the_form_has_none(seeded_store, pid):
+    path = store.profile_path(seeded_store, "kubecon")
+    meta, body = frontmatter.load(path)
+    meta["bio_on_form"] = False
+    frontmatter.save(path, meta, body)
+    packet = review.packet(seeded_store, pid)["packet"]
+    assert packet["bio_on_form"] is False and packet["bio"] == ""
 
 
 def test_record_rejects_missing_criterion_and_bad_values(seeded_store, pid):

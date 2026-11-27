@@ -129,6 +129,21 @@ def test_validate_reports_problems(seeded_store):
     assert "duplicate session type id" in text
 
 
+def test_bio_on_form_defaults_to_true_and_can_be_switched_off(seeded_store):
+    assert profile.load_effective(seeded_store, "kubecon")["bio_on_form"] is True
+    path = store.profile_path(seeded_store, "kubecon")
+    meta, body = frontmatter.load(path)
+    meta["bio_on_form"] = False
+    frontmatter.save(path, meta, body)
+    assert profile.load_effective(seeded_store, "kubecon", "kubecon-eu-2027")["bio_on_form"] is False
+    assert profile.validate(seeded_store, "kubecon") == []
+    meta["bio_on_form"] = "maybe"
+    frontmatter.save(path, meta, body)
+    assert any("bio_on_form" in problem for problem in profile.validate(seeded_store, "kubecon"))
+    # an unusable value never hides the bio by accident
+    assert profile.load_effective(seeded_store, "kubecon")["bio_on_form"] is True
+
+
 def test_validate_event_problems(seeded_store):
     path = store.event_path(seeded_store, "kubecon", "kubecon-eu-2027")
     meta, body = frontmatter.load(path)

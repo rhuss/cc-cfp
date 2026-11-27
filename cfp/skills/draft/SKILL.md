@@ -118,7 +118,7 @@ Per field kind:
 - Resources field (the field with id `resources`, whether its kind is `resources` or free text such as `longtext`): run `resource list`, offer recordings first and recommend one (FR-027: the Speaker criterion reaches its top level only with a recording). Let the user pick, up to the form's maximum when the field guidance names one, then save with `proposal set-meta --proposal <id> --resources id,id`. That call stores the ids and writes one `Title: link` line per resource into the field. On a free-text field, print the resulting lines in a fenced block and ask whether to add what the field guidance asks for beyond the stored resources (for example recordings of co-speakers); when the user adds something, save the complete text with `proposal set-field --proposal <id> --field resources --text-file <file>`. When no recording exists, say so and suggest `/cfp:bio resource add` later.
 - Other `text` and `longtext` fields: draft per guidance, print the full text in a fenced block with its count, ask, save.
 
-Bio: run `bio list`. Show each variation with `chars` against `bio_limit` (`bio_limit_status` tells whether the limit is verified). Ask which one to use. Before attaching the chosen variation, run `bio show --name <name>` and print its complete text in a fenced block with `<chars>/<bio_limit> chars`, then ask to attach, shorten, or pick another. When the bio is drafted fresh inside this flow (no stored variation fits), the same rule applies: the complete bio text appears in a fenced block above the question that offers to save it. Then:
+Bio: when `bio_on_form` is false in the `profile show` output, the form has no speaker bio. Say so in one line, attach none, and skip the rest of this bio part. Otherwise run `bio list`. Show each variation with `chars` against `bio_limit` (`bio_limit_status` tells whether the limit is verified). Ask which one to use. Before attaching the chosen variation, run `bio show --name <name>` and print its complete text in a fenced block with `<chars>/<bio_limit> chars`, then ask to attach, shorten, or pick another. When the bio is drafted fresh inside this flow (no stored variation fits), the same rule applies: the complete bio text appears in a fenced block above the question that offers to save it. Then:
 
 ```bash
 python3 -I "$PLUGIN_ROOT/scripts/cfp_store.py" proposal set-meta --proposal <id> --bio "<name>"
@@ -152,7 +152,7 @@ When `round` reaches `review_rounds` without a pass: list the remaining weakness
 
 Only after a pass verdict (FR-021). Skip silently to Step 9 when the last verdict is not `pass`.
 
-For each of: `title`, `abstract`, the reviewer-only relevance field (the id in `relevance_field` from `profile show`, when it is not null), and the bio snapshot (from `proposal show`), invoke the `prose:humanizer` skill through the Skill tool with the text and `voice_profile` from the config (omit the voice when empty). Then:
+For each of: `title`, `abstract`, the reviewer-only relevance field (the id in `relevance_field` from `profile show`, when it is not null), and the bio snapshot (from `proposal show`; only when `bio_on_form` is true), invoke the `prose:humanizer` skill through the Skill tool with the text and `voice_profile` from the config (omit the voice when empty). Then:
 
 - Skill tool reports the skill as unavailable: print "Voice pass skipped: prose plugin not installed" and go to Step 9. Texts stay as drafted.
 - Skill returns usage or help text instead of a rewrite: apply the humanizer core rules inline (no AI vocabulary, no rule-of-three padding, no inflated symbolism, varied sentence length, no em-dash or en-dash) and tell the user the rewrite was done inline.
@@ -215,7 +215,7 @@ Print the output in full (it is markdown, not JSON), then the proposal path from
 Resume detection reads `proposal show` and picks the first step whose data is missing:
 
 - No `title` or `abstract` field: Step 5 (after checking `talk complete`, which may send the flow back to Step 4).
-- A required field from `profile show` is missing, or `bio` is empty while the profile has a bio limit: Step 6 for the missing fields only.
+- A required field from `profile show` is missing, or `bio` is empty while `bio_on_form` is true: Step 6 for the missing parts only.
 - `review_rounds` is empty, `review_stale` is true (the text was edited after the last review), or the last verdict is `revise` and the round count is below `review_rounds` from the config: Step 7.
 - Last verdict `pass` and `voice_pass` false: Step 8.
 - `count` reports entries in `over`: Step 9.

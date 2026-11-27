@@ -33,6 +33,7 @@ PROFILE_DEFAULTS = {
     "rubric": {"scale_max": 5, "pass_average": 4.0, "pass_min_criterion": 3.0, "criteria": []},
     "rules": [],
     "rejection_reasons": [],
+    "bio_on_form": True,
     "bio_limit": None,
     "bio_limit_status": "unverified",
 }
@@ -248,6 +249,9 @@ def effective(profile, event):
         "rules": copy.deepcopy(profile.get("rules") or []),
         "rejection_reasons": list(profile.get("rejection_reasons") or []),
         "submission_limit": submission_limit,
+        # Only an explicit false switches the bio off; an unusable value is a
+        # validation problem and must not hide the bio by accident.
+        "bio_on_form": profile.get("bio_on_form") is not False,
         "bio_limit": textutil.coerce_limit(profile.get("bio_limit")),
         "bio_limit_status": profile.get("bio_limit_status") or "unverified",
         "tracks": tracks,
@@ -323,6 +327,8 @@ def validate(store_path, profile_id, event_id=None):
         seen.add(criterion["id"])
     if profile.get("bio_limit_status", "unverified") not in LIMIT_STATUSES:
         problems.append(f"unknown bio_limit_status {profile.get('bio_limit_status')!r}")
+    if not isinstance(profile.get("bio_on_form", True), bool):
+        problems.append(f"bio_on_form must be true or false, got {profile.get('bio_on_form')!r}")
 
     if event_id:
         try:

@@ -2,7 +2,7 @@
 
 import pytest
 
-from cfplib import bios, pasteview, proposals, talks
+from cfplib import bios, frontmatter, pasteview, proposals, store, talks
 
 TODAY = "2026-10-09"
 EVENT = "kubecon-eu-2027"
@@ -43,7 +43,7 @@ def test_json_format_orders_fields_and_flags(seeded_store, pid):
     assert by_id["cncf_oss_projects"]["flags"] == [] and by_id["cncf_oss_projects"]["limit_status"] is None
     assert by_id["format"]["audience"] == "public" and by_id["value_to_community"]["audience"] == "reviewer"
     assert data["bio"]["text"] == "Test Speaker bio." and data["bio"]["chars"] == 17 and data["bio"]["limit"] == 500
-    assert data["bio"]["flags"] == []
+    assert data["bio"]["flags"] == [] and data["bio"]["on_form"] is True
     assert data["over"] == ["title"] and "value_to_community" in data["missing_required"]
     assert any("approximate" in w for w in data["warnings"])
 
@@ -60,6 +60,20 @@ def test_markdown_format(seeded_store, pid):
     assert "17/500" in text
     assert "not drafted" in text
     assert chr(0x2014) not in text and chr(0x2013) not in text
+
+
+def test_bio_is_left_out_when_the_form_has_none(seeded_store, pid):
+    path = store.profile_path(seeded_store, "kubecon")
+    meta, body = frontmatter.load(path)
+    meta["bio_on_form"] = False
+    meta["bio_limit_status"] = "unverified"
+    frontmatter.save(path, meta, body)
+    data = pasteview.render(seeded_store, pid, "json")
+    assert data["bio"]["on_form"] is False and data["bio"]["status"] == "not-on-form"
+    assert data["bio"]["text"] == "" and data["bio"]["flags"] == []
+    text = pasteview.render(seeded_store, pid, "markdown")
+    assert "Speaker bio" not in text and "Test Speaker bio." not in text
+    assert text.rstrip().split("\n## ")[-1].startswith("10. Additional resources")
 
 
 def test_pasteview_cli_markdown_and_json(seeded_store, pid, run_cli):

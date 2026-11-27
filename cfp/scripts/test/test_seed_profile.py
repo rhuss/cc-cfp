@@ -1,7 +1,7 @@
 """The shipped KubeCon seed profile must validate and carry the documented values."""
 
 from cfplib import frontmatter, profile
-from conftest import SEED_DIR
+from conftest import SEED_DIR, TEMPLATES_DIR
 
 EXPECTED_FIELDS = [
     "title", "abstract", "value_to_community", "audience_level", "track", "format", "case_study",
@@ -73,3 +73,9 @@ def test_seed_example_present(seeded_store):
     examples, _ = profile.list_examples(seeded_store, "kubecon")
     assert [e["id"] for e in examples] == ["lf-sample-container-runtime"]
     assert examples[0]["origin"] == "official-sample" and examples[0]["benefits"]
+
+
+def test_profile_template_documents_bio_on_form():
+    meta, _ = frontmatter.load(TEMPLATES_DIR / "profile.md")
+    assert meta["bio_on_form"] is True
+    assert list(meta).index("bio_on_form") < list(meta).index("bio_limit")
