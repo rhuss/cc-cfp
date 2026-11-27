@@ -1,5 +1,695 @@
 = Profile and event schema
-:guide-no-sources:
 
-// STUB
-This page is written by a later task of the guide plan.
+// Sources:
+// cfp:cfp/scripts/cfplib/profile.py:7-20,22-58,60-82,96-127,135-178,184-261,273-355,391-440,446-473,476-499,505-510
+// cfp:cfp/scripts/cfplib/preflight.py:8-11,28-35,63-67,71-75,98-120,130-133,141-147,157-168,178-179,206-207,217-235
+// cfp:cfp/scripts/cfplib/text.py:18-31,34-42
+// cfp:cfp/scripts/cfplib/proposals.py:8,11,232-257,260-264,267-272,280-292
+// cfp:cfp/scripts/cfplib/counts.py:13-23
+// cfp:cfp/scripts/cfplib/pasteview.py:40-43,53-74
+// cfp:cfp/scripts/cfplib/review.py:9-13,16,23-35,55-58,63-73,82-83,135-141
+// cfp:cfp/scripts/cfplib/seeds.py:105-115
+// cfp:cfp/scripts/cfplib/config.py:124-129
+// cfp:cfp/scripts/cfplib/lifecycle.py:77-87,95-116
+// cfp:cfp/scripts/cfplib/store.py:67-80
+// cfp:cfp/scripts/cfp_store.py:328-330
+// cfp:cfp/knowledge-base/templates/profile.md:1-53
+// cfp:cfp/knowledge-base/templates/event.md:1-20
+// cfp:cfp/knowledge-base/templates/example.md:1-17
+// cfp:cfp/knowledge-base/guidance/profile-research.md:26,52
+// cfp:cfp/skills/profile/SKILL.md:125-131,142-179
+// cfp:cfp/skills/draft/SKILL.md:49,53-55,110-121
+// cfp:cfp/skills/_shared/preflight-checks.md:41-43
+// cfp:cfp/skills/committee-review/SKILL.md:12
+// cfp:cfp/agents/committee-reviewer.md:16-18,31,34,49
+
+This page lists every key of a conference profile, an event override, and a calibration example, as the code reads them at {cfp-version}.
+xref:profiles/index.adoc[How profiles work] explains the concepts, xref:internals/store.adoc[Store files] shows the files, and xref:internals/rules.adoc[How rules and verdicts are computed] describes what each rule kind checks.
+xref:profiles/new.adoc[Research a new conference] shows how `/cfp:profile` fills these keys for you.
+
+A profile lives in `profiles/<profile>/profile.md`, an event in `profiles/<profile>/events/<event>.md`, and an example in `profiles/<profile>/examples/<id>.md`.
+`profile write --from-json` and `event write --from-json` take the same keys as JSON.
+
+In the tables, "Default" is the value the loader or the reader uses when the key is missing.
+"Validated" says whether `profile validate` checks the key.
+
+== Profile
+
+[cols="2,2,2,2,5"]
+|===
+|Key |Type |Default |Validated |Used by
+
+|`id`
+|string
+|the directory name
+|no
+|The loader always sets it from the directory name under `profiles/`.
+
+|`name`
+|string
+|empty
+|no
+|`/cfp:profile show` and `profile list`.
+
+|`platform`
+|string
+|empty
+|no
+|`/cfp:profile show` and `profile list`.
+Free text: no code compares it with a fixed list.
+
+|`approved`
+|boolean
+|`false`
+|no
+|`/cfp:draft` refuses an unapproved profile.
+With an event, the merged form counts as approved only when both are.
+`/cfp:init` sets it to `true` on the profiles it copies into the store.
+
+|`seed_version`
+|string (ISO date)
+|empty
+|no
+|`profile seed-status` compares it with the shipped seed as a string.
+Empty means a local profile that is not a copy of a seed.
+
+|`sources`
+|list of URLs
+|`[]`
+|no
+|Carried into the merged form.
+
+|`session_types`
+|list of <<session-type,session types>>
+|`[]`
+|yes
+|Drafting, the speaker rules, and the review packet.
+
+|`submission_limit`
+|integer or empty
+|empty
+|no
+|Fallback limit of the `submission_limit` rule.
+
+|`selection_limit`
+|string
+|empty
+|no
+|Carried into the merged form.
+
+|`fields`
+|list of <<field,fields>>
+|`[]`
+|yes
+|Drafting, counts, the paste view, and the review packet, in list order.
+
+|`rubric`
+|<<rubric,rubric>>
+|scale 5, pass average 4.0, minimum criterion 3.0, no criteria
+|yes
+|The committee review.
+
+|`rules`
+|list of <<rule,rules>>
+|`[]`
+|yes
+|The pre-flight check.
+
+|`rejection_reasons`
+|list of strings
+|`[]`
+|no
+|The committee reviewer lowers a criterion for each reason that applies.
+
+|`bio_on_form`
+|boolean
+|`true`
+|yes
+|Only an explicit `false` switches the bio off.
+Drafting then attaches no bio, the count reports `not-on-form`, and the review packet and the paste view carry no bio text.
+
+|`bio_limit`
+|integer or empty
+|empty
+|no
+|The bio count.
+It is coerced like a field `limit`.
+
+|`bio_limit_status`
+|<<limit-status,limit status>>
+|`unverified`
+|yes
+|The status of the bio count.
+|===
+
+The loader turns a single value of `sources`, `session_types`, `fields`, `rules`, or `rejection_reasons` into a one-item list.
+A `rubric` that is not a mapping is replaced with the default rubric.
+
+=== Body sections
+
+[cols="1,4"]
+|===
+|Section |Used by
+
+|`## Drafting guidance`
+|Free prose for drafting.
+The committee review packet carries it.
+
+|`## Notes`
+|Conflicts and assumptions from the research.
+|===
+
+`profile write` adds both headings when they are missing.
+In its JSON, the sections go into a `body` mapping with the heading as key, or into the keys `drafting_guidance` and `notes`.
+
+[#session-type]
+== Session type
+
+[cols="2,2,2,2,5"]
+|===
+|Key |Type |Default |Validated |Used by
+
+|`id`
+|string
+|none
+|present and unique
+|The proposal's `session_type` names it.
+An event override patches or removes the entry with this id.
+
+|`name`
+|string
+|none
+|no
+|The list `/cfp:draft` asks you to pick from.
+
+|`duration_min`
+|integer
+|none
+|no
+|The list `/cfp:draft` asks you to pick from.
+
+|`min_speakers`
+|integer
+|no lower bound
+|no
+|The `speaker_count` rule.
+`multi_company_panel` applies only when it is 3 or more.
+Above 1, `/cfp:draft` asks for co-speakers.
+
+|`max_speakers`
+|integer
+|no upper bound
+|no
+|The `speaker_count` rule, and the number of co-speakers `/cfp:draft` asks for.
+
+|`notes`
+|string
+|none
+|no
+|`/cfp:profile show`.
+|===
+
+[#field]
+== Field
+
+[cols="2,2,2,2,5"]
+|===
+|Key |Type |Default |Validated |Used by
+
+|`id`
+|string
+|none
+|present and unique
+|The proposal section `Field: <id>`.
+An event override patches the entry with this id.
+
+|`label`
+|string
+|the `id`
+|no
+|Counts, the paste view, and the review packet.
+
+|`required`
+|boolean
+|`false`
+|no
+|A required field without text is listed in `missing_required` by the count, and the paste view warns about it.
+
+|`kind`
+|<<field-kind,field kind>>
+|none
+|yes
+|`proposal set-field` and the drafting steps per kind.
+
+|`limit`
+|positive integer or empty
+|empty (no limit)
+|yes
+|The character count.
+The merged form coerces it: a value that is not a positive integer counts as no limit.
+
+|`limit_status`
+|<<limit-status,limit status>>
+|`unverified`
+|yes
+|The count status and the paste view warning.
+
+|`source`
+|string
+|none
+|no
+|A page URL or `screenshot:<file>`, empty for `unverified`.
+
+|`options`
+|list of strings
+|none
+|no
+|`proposal set-field` accepts only these values for `choice` and `multichoice`, except on the `track` field.
+The event's tracks replace the options of the `track` field when the event lists any.
+
+|`audience`
+|<<audience,audience>>
+|`public`
+|yes
+|The relevance field, the review packet, and the paste view.
+
+|`guidance`
+|string
+|none
+|no
+|`/cfp:draft` drafts each field from its guidance.
+|===
+
+[#field-kind]
+=== Field kinds
+
+[cols="1,4"]
+|===
+|Kind |Handling
+
+|`text`
+|Drafted from its guidance.
+
+|`longtext`
+|Drafted from its guidance.
+A reviewer-only `longtext` field can be the <<relevance-field,relevance field>>.
+
+|`choice`
+|`/cfp:draft` asks you and never generates it.
+When the field has `options`, `set-field` matches the value against them without regard to case and stores the option's spelling.
+
+|`multichoice`
+|When the field has `options`, `set-field` takes a comma-separated list, matches each part against them, and stores the parts comma-joined.
+
+|`boolean`
+|`/cfp:draft` asks you and never generates it.
+`set-field` stores `Yes` for `yes`, `true`, `y`, `1` and `No` for `no`, `false`, `n`, `0`, and refuses anything else.
+
+|`link`
+|No kind-specific handling in `set-field`.
+
+|`resources`
+|No kind-specific handling in `set-field`.
+`/cfp:draft` fills the field with id `resources` from your resources, whatever its kind.
+|===
+
+[#audience]
+=== Audiences
+
+[cols="1,4"]
+|===
+|Audience |Meaning
+
+|`public`
+|The default.
+
+|`reviewer`
+|Reviewer-only.
+Candidates for the <<relevance-field,relevance field>>.
+|===
+
+[#limit-status]
+=== Limit statuses
+
+[cols="1,4"]
+|===
+|Status |Meaning
+
+|`page`
+|From a fetched public page, with its URL in `source`.
+
+|`screenshot`
+|From a screenshot of the form, with `screenshot:<file>` in `source`.
+
+|`unverified`
+|Without a source.
+A count within the limit gets the status `unverified` instead of `ok`, and the paste view warns that the live form may differ.
+|===
+
+The same values apply to `limit_status` on a field and to `bio_limit_status` on the profile.
+
+[#relevance-field]
+=== The relevance field
+
+The relevance field is the field with id `benefits` when the form has one.
+Otherwise it is the first field in form order with `audience: reviewer` and `kind: longtext` whose id is not `previously_presented` or `resources`.
+With no such field the form has none, and `profile show` returns `relevance_field` as null.
+
+[#rubric]
+== Rubric and criterion
+
+[cols="2,2,2,2,5"]
+|===
+|Key |Type |Default |Validated |Used by
+
+|`scale_max`
+|number
+|5
+|no
+|The committee reviewer scores each criterion from 0 to this value.
+
+|`pass_average`
+|number
+|4.0
+|no
+|The verdict is `pass` only when the average reaches it.
+
+|`pass_min_criterion`
+|number
+|3.0
+|no
+|The verdict is `revise` when any criterion scores below it.
+
+|`criteria`
+|list of criteria
+|`[]`
+|yes
+|The committee review refuses to run without criteria.
+|===
+
+A criterion has these keys:
+
+[cols="2,2,2,2,5"]
+|===
+|Key |Type |Default |Validated |Used by
+
+|`id`
+|string
+|none
+|present and unique
+|The keys of the reviewer's scores and comments.
+
+|`name`
+|string
+|none
+|no
+|The review packet.
+
+|`description`
+|string
+|none
+|no
+|The review packet: what each score level means.
+|===
+
+[#rule]
+== Rule
+
+[cols="2,2,2,2,5"]
+|===
+|Key |Type |Default |Validated |Used by
+
+|`id`
+|string
+|none
+|present and unique
+|Findings name the rule by this id.
+
+|`kind`
+|<<rule-kind,rule kind>>
+|none
+|yes
+|Picks the evaluator, or marks the rule as manual.
+
+|`severity`
+|`disqualify` or `warn`
+|`disqualify`
+|yes
+|A `disqualify` finding fails the pre-flight check, a `warn` finding does not.
+
+|`params`
+|mapping
+|`{}`
+|no
+|The evaluator of the kind, see below.
+
+|`source`
+|string
+|empty
+|no
+|Copied into each finding, and shown by `/cfp:profile show`.
+
+|`text`
+|string
+|empty
+|no
+|The conference's own wording.
+The judging procedure reads it for `custom` rules.
+|===
+
+[#rule-kind]
+=== Rule kinds and their params
+
+[cols="2,3,4"]
+|===
+|Kind |Params read |Other input
+
+|`submission_limit`
+|`max`
+|The event's `submission_limit` wins over `max`.
+Without either, the profile's `submission_limit`.
+
+|`repeat_within_months`
+|`months` (default 12), `note_field` (default `previously_presented`)
+|The talk's outings.
+Text in `note_field` lowers the finding to `warn`.
+
+|`track_in_event`
+|none
+|The event's `tracks`; no check without them.
+
+|`speaker_count`
+|none
+|`min_speakers` and `max_speakers` of the proposal's session type.
+
+|`all_men_panel`
+|`min_speakers` (default 3)
+|The speaker genders.
+
+|`multi_company_panel`
+|none
+|Applies when the session type's `min_speakers` is 3 or more.
+
+|`vendor_pitch`
+|none
+|Not computed; left to the committee review.
+
+|`custom`
+|`session_type` (read by the judging procedure only)
+|Not computed; the pre-flight procedure judges `text` against the proposal.
+|===
+
+== Event override
+
+[cols="2,2,2,2,5"]
+|===
+|Key |Type |Default |Validated |Used by
+
+|`id`
+|string
+|the file name
+|no
+|The loader always sets it from the file name under `events/`.
+
+|`profile`
+|string
+|empty
+|yes
+|`profile validate` reports a value that differs from the profile id.
+`event write` sets it.
+
+|`name`
+|string
+|empty
+|no
+|The review packet and the paste view.
+
+|`location`
+|string
+|empty
+|no
+|`/cfp:profile show`.
+
+|`event_start`, `event_end`
+|ISO date
+|empty
+|yes
+|The `year` of an example captured from an accepted proposal.
+
+|`cfp_open`
+|ISO date
+|empty
+|yes
+|`/cfp:profile show`.
+
+|`cfp_close`
+|ISO date
+|empty
+|yes
+|`days_to_close` in `profile list`.
+`/cfp:draft` warns when it lies before today.
+
+|`cfp_close_timezone`
+|string
+|empty
+|no
+|`/cfp:profile show`.
+
+|`notification`
+|ISO date
+|empty
+|yes
+|`/cfp:profile show`.
+
+|`approved`
+|boolean
+|`false`
+|no
+|The merged form counts as approved only when profile and event are.
+`event write` takes it from the JSON, `false` when the JSON has none.
+
+|`sources`
+|list of URLs
+|`[]`
+|no
+|Carried into the merged form.
+
+|`tracks`
+|list of strings
+|`[]`
+|yes (empty list)
+|The `track_in_event` rule, and the options of the `track` field.
+
+|`submission_limit`
+|integer or empty
+|empty
+|no
+|Replaces the profile's `submission_limit` when set.
+
+|`session_type_overrides`
+|list of session type patches
+|`[]`
+|yes
+|Merged onto the profile's `session_types`.
+
+|`field_overrides`
+|list of field patches
+|`[]`
+|yes
+|Merged onto the profile's `fields`.
+|===
+
+The body has one section, `## Notes`.
+In the `event write` JSON it goes into a `body` mapping or the key `notes`.
+
+=== How an event merges onto a profile
+
+* An override without an `id` is skipped.
+* An override whose `id` matches an entry updates only the keys it sets.
+* An override with an unknown `id` is added as a new entry.
+* A session type override with `remove: true` removes the entry.
+Field overrides cannot remove a field.
+* When the event lists `tracks`, they become the `options` of the `track` field.
+* Every field `limit` is coerced, and so is `bio_limit`.
+* The event's `submission_limit` replaces the profile's when it is set.
+* `rubric`, `rules`, `rejection_reasons`, the bio keys, and `## Drafting guidance` come from the profile only.
+
+== Calibration example
+
+[cols="2,2,2,5"]
+|===
+|Key |Type |Default |Used by
+
+|`id`
+|string
+|the proposal id, else a slug of the title
+|The file name.
+
+|`profile`
+|string
+|the profile
+|Set when the example is written.
+
+|`event`
+|string
+|empty
+|The review packet.
+
+|`year`
+|integer
+|empty
+|The review packet, and the sort order after `added`.
+
+|`origin`
+|string
+|`manual`
+|The review packet.
+A captured accepted proposal gets `own-accepted`.
+
+|`proposal`
+|string
+|empty
+|The proposal an accepted example came from.
+
+|`added`
+|ISO date
+|today
+|Examples are sorted newest first.
+|===
+
+The body sections are `## Title`, `## Abstract`, `## Benefits` (the text of the relevance field), and the optional `## Why it worked`.
+The review packet carries the title, abstract, benefits, event, year, and origin of the newest examples, three by default.
+`profile validate` does not read examples.
+
+== What profile validate reports
+
+`profile validate --profile <id> [--event <event>]` returns `valid` and a list of `problems`.
+`valid` is true when the list is empty.
+
+[cols="1,3"]
+|===
+|Part |Problems reported
+
+|Profile file
+|The profile does not exist.
+
+|Fields
+|A field without id, a duplicate id, an unknown `kind`, an unknown `limit_status`, an unknown `audience`, a `limit` that is not a positive integer or empty.
+
+|Session types
+|A session type without id, a duplicate id.
+
+|Rules
+|A rule without id, a duplicate id, an unknown `kind`, an unknown `severity`.
+
+|Rubric
+|No criteria while the profile is approved, a criterion without id, a duplicate criterion id.
+
+|Bio
+|An unknown `bio_limit_status`, a `bio_on_form` that is not `true` or `false`.
+
+|Event (with `--event`)
+|The event does not exist, a `profile` that names another profile, an empty `tracks` list, a session type override without id, a `remove: true` for a session type the profile does not have, a field override without id, a date key (`cfp_open`, `cfp_close`, `event_start`, `event_end`, `notification`) that is not an ISO date.
+|===
+
+`profile validate` does not check `name`, `platform`, `sources`, `params`, or any key the tables mark "no".
