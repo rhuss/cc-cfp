@@ -174,3 +174,15 @@ rules:
       - '(?i)front matter'
       - 'proposals/'
       - 'xref:reference/schema\.adoc'
+  - glob: "content/modules/ROOT/pages/internals/rules.adoc"
+    require:
+      - 'submission_limit'
+      - 'repeat_within_months'
+      - 'track_in_event'
+      - 'speaker_count'
+      - 'all_men_panel'
+      - 'multi_company_panel'
+      - 'vendor_pitch'
+      - 'custom'
+      - 'pass_average'
+      - 'pass_min_criterion'

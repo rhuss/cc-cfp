@@ -1,5 +1,277 @@
 = How rules and verdicts are computed
-:guide-no-sources:
 
-// STUB
-This page is written by a later task of the guide plan.
+// Sources:
+// cfp:cfp/scripts/cfplib/preflight.py:8-11,15-16,19-25,28-35,38-52,55-68,71-95,98-127,130-138,141-154,157-175,178-193,196-203,206-240,243-275
+// cfp:cfp/scripts/cfplib/profile.py:8-19,33,208,212-213,249,255-257
+// cfp:cfp/scripts/cfplib/lifecycle.py:10-18,29,32-55,58-74,131,152-159,166-174
+// cfp:cfp/scripts/cfplib/review.py:5-6,91-127,130-167
+// cfp:cfp/scripts/cfplib/text.py:6-52
+// cfp:cfp/scripts/cfplib/proposals.py:79-105,260-292
+// cfp:cfp/scripts/cfplib/counts.py:6-36
+// cfp:cfp/scripts/cfp_store.py:7-8,535-563
+// cfp:cfp/skills/_shared/preflight-checks.md:1-62
+// cfp:cfp/knowledge-base/profiles/kubecon/profile.md:13-43,137-140,157-203
+
+This page follows the pre-flight, the ready check, the committee review verdict, and the character counts through the code of the store library under `cfp/scripts/cfplib/`.
+For what you see when you run them, read xref:user/preflight.adoc[Pre-flight, counts, and the paste view] and xref:user/review.adoc[Committee review and voice pass].
+
+== Computed and judged
+
+A profile rule has an `id`, a `kind`, a `severity`, optional `params`, a `text`, and a `source`.
+The profile library defines eight rule kinds: `submission_limit`, `repeat_within_months`, `track_in_event`, `speaker_count`, `all_men_panel`, `multi_company_panel`, `vendor_pitch`, and `custom`.
+A severity is either `disqualify` or `warn`, and `profile.SEVERITIES` is the one place that defines the two values.
+
+`preflight.run` loads the effective profile for the proposal's event and walks its `rules` list, which the event can't change: the merge copies the rules from the profile only.
+The first six kinds each have an evaluator function in the `EVALUATORS` table.
+`vendor_pitch` and `custom` are the `MANUAL_KINDS`; `run` collects them in a `manual` list with their id, kind, severity (`disqualify` when the rule has none), params, text, and source, and evaluates nothing.
+A rule that isn't a mapping, or whose kind has neither an evaluator nor a manual entry, is skipped without a message.
+
+An evaluator returns nothing when the rule holds and a finding when it doesn't.
+A finding carries the rule's `id` as `rule`, its `kind`, a `severity`, a `text`, and the rule's `source` (an empty string when the rule has none).
+Most evaluators use the rule's own severity, with `disqualify` as the default.
+Where the store lacks the data to decide, several of them return a `warn` finding instead, whatever the rule's severity.
+
+The KubeCon + CloudNativeCon profile shipped with cfp has one rule of each of the seven kinds it uses, all with the severity `disqualify`:
+
+[cols="2,2,2"]
+|===
+|Rule id |Kind |Params
+
+|`submission-limit`
+|`submission_limit`
+|`max: 3`
+
+|`repeat-one-year`
+|`repeat_within_months`
+|`months: 12`, `note_field: previously_presented`
+
+|`track-in-event`
+|`track_in_event`
+|none
+
+|`speaker-count`
+|`speaker_count`
+|none
+
+|`all-men-panel`
+|`all_men_panel`
+|`min_speakers: 3`
+
+|`multi-company-panel`
+|`multi_company_panel`
+|none
+
+|`vendor-pitch`
+|`vendor_pitch`
+|none
+|===
+
+== Submission limit
+
+`_rule_submission_limit` takes the limit from the first of three places that has one:
+
+. the event's own `submission_limit`;
+. the rule's `params.max`;
+. the `submission_limit` of the effective profile.
+
+Without a limit, the rule returns no finding.
+
+The count comes from `lifecycle.count_submissions`.
+It reads every proposal file in the store and counts those for the same event whose status is one of `submitted`, `accepted`, `rejected`, or `presented`.
+Each proposal id counts once, so a sync conflict copy of a file doesn't count twice.
+The proposal under check is excluded: `preflight` passes its id as `exclude_proposal`, so the number is the count of your other proposals for that event.
+
+The rule fails when that count already reaches the limit (`count >= limit`).
+With KubeCon's `max: 3`, three other counted proposals for the event give a finding, and two don't.
+Proposals in `draft`, `ready`, or `withdrawn` never count.
+
+Files that can't be parsed are returned as problems and left out of the count, and `preflight` adds them to the `problems` list of its result.
+When the limit isn't reached but some files were skipped, the rule returns a `warn` finding that names the skipped paths, because the count may be too low.
+
+== Repeat within months
+
+`_rule_repeat` reads two params: `months` (default 12) and `note_field` (default `previously_presented`).
+The window starts that many months before today.
+`shift_months` clamps the day to the length of the target month, so one month back from 31 March 2027 is 28 February 2027.
+
+The evaluator loads the proposal's talk and returns nothing when the talk can't be loaded.
+Then it looks at the talk's `outings`.
+An outing is a hit when all of these hold:
+
+* its `kind` is `presented` (an outing without a kind counts as `presented`);
+* its `family` equals the proposal's `profile`;
+* its `date` parses and lies between the window start and today, both included.
+
+Setting a proposal to `presented` records exactly such an outing, with the proposal's event, its profile as the family, and the date.
+No hits, no finding.
+
+With hits, the severity depends on the note field.
+The evaluator strips the text of that field in the proposal, and when anything is left, the finding drops to `warn`.
+It doesn't judge the text: any non-empty value is enough, and the finding text then asks you to make sure the differences it describes are significant.
+An empty note field keeps the rule's severity, `disqualify` by default.
+In both cases the finding names the talk and each event and date it was presented at.
+
+== Track
+
+`_rule_track` compares the proposal's `track` with the `tracks` list of the effective profile.
+That list comes only from the event file; a profile on its own has no tracks.
+An event without tracks skips the rule.
+
+The comparison trims the proposal's value and ignores case.
+A missing track and a track outside the list both fail with the rule's severity, and the finding text lists the event's tracks.
+
+== Speaker count
+
+`_rule_speaker_count` looks up the proposal's `session_type` by id in the effective profile's session types.
+When no session type matches, it returns nothing.
+
+The speaker total is 1 (you) plus the number of entries in the proposal's `co_speakers`.
+The rule fails when the total is below the session type's `min_speakers` or above its `max_speakers`; either bound may be missing, and a missing bound isn't checked.
+On KubeCon, a `panel` allows 3 to 5 speakers and a `lightning` talk exactly 1.
+
+== Line-ups in which every speaker is a man
+
+`_rule_all_men` applies to any proposal whose speaker total reaches the rule's `min_speakers` param (default 3), whatever its session type.
+Below that total it returns nothing.
+
+The gender list starts with `speaker_gender` from your store config, followed by the proposal's `co_speaker_genders`.
+Missing co-speaker entries count as unknown.
+`_normalize_gender` lowercases and trims each value, then maps it:
+
+* an empty value and `unknown`, `n/a`, `na`, `?`, `prefer not to say`, `undisclosed`, or `none` become unknown;
+* `man`, `male`, and `m` become a man;
+* any other value stays as it is and counts as not a man.
+
+The result is one of three outcomes:
+
+* At least one known gender is not a man: no finding.
+* Every gender is a man: a finding with the rule's severity, `disqualify` by default.
+* Every known gender is a man and some are unknown: a `warn` finding that names how many are unknown and asks you to set `co_speaker_genders` and `speaker_gender`.
+
+So a three-person line-up without any gender data gets the `warn` finding, never a pass.
+
+== Multi-company panels
+
+`_rule_multi_company` doesn't look at the speaker total.
+It applies when the proposal's session type requires at least three speakers, that is, when the session type's `min_speakers` is 3 or more (a missing value counts as 1).
+Without a matching session type it returns nothing.
+On KubeCon, only `panel` has a minimum of 3.
+
+The company list starts with `speaker_company` from your store config.
+For each entry in `co_speakers`, the company is the text after the last comma, trimmed; an entry without a comma has no company.
+
+* Any company is unknown: a `warn` finding asking for "Name, Company" entries and `speaker_company`.
+* All companies are the same, ignoring case: a finding with the rule's severity.
+* Otherwise: no finding.
+
+== Manual rules and judged findings
+
+The skill that ran `preflight` judges the manual rules, following `cfp/skills/_shared/preflight-checks.md`.
+Both `/cfp:check` and `/cfp:draft` read that file, so they reach the same verdicts.
+
+A `custom` rule gets one of four verdicts: `violated`, `met`, `does not apply`, or `cannot tell`.
+Only `violated` adds a finding by itself.
+`cannot tell` on a `disqualify` rule leads to a question; your answer `no` adds the finding as for `violated`, and `not sure` adds it with the severity `warn`.
+`cannot tell` on a `warn` rule adds nothing.
+Rules of kind `vendor_pitch` get no finding at all; the committee review scores them.
+The same file also defines the audience level comparison, which records a mismatch under the rule id `audience-level` with the severity `warn`.
+
+The skill writes each finding to a JSON file and records it with `preflight add-finding --from-json`, so free text never goes on the command line.
+`preflight.add_finding` needs a rule id and a text, and then splits on whether the id belongs to a rule of the effective profile:
+
+Profile rule:: The finding takes the profile rule's `kind` (`manual` if the rule has none).
+It also takes the rule's `severity` (`disqualify` if the rule has none) and `source`, unless the caller passes its own.
+The skill leaves both out for a violated `custom` rule, so a `disqualify` rule blocks `ready` exactly like a computed one.
+
+Any other id:: The kind is `manual`, and the call fails unless it names a severity.
+For the id `audience-level`, the source defaults to `FR-029 audience level comparison`.
+
+The severity must be `disqualify` or `warn`.
+`add_finding` appends the new finding to the stored findings and stores the result again, as the next section describes.
+
+== The stored pre-flight result
+
+`_store_result` writes a `preflight` map into the proposal's front matter with the date, `ok`, and the list of findings.
+`ok` is false as soon as one finding has the severity `disqualify`.
+
+`run` starts with an empty finding list and stores only what its evaluators return.
+Every `preflight` run therefore replaces the stored findings, judged ones included.
+That's why `preflight-checks.md` tells the skill to repeat both judged checks after each run and add back what still applies.
+
+The store CLI renames `ok` to `passed` in the output of `preflight` and `preflight add-finding`, because its own top-level `ok` means only that the call succeeded.
+The output of `preflight` also holds the `manual` list and the `problems` list.
+
+Edits can clear the stored map.
+Setting a field of a `ready` proposal sets it back to `draft`, empties `preflight`, and marks the review as stale when there are review rounds.
+Setting the status to `draft` by hand does the same.
+
+== The ready check
+
+`lifecycle.ready_check` collects reasons against `ready`:
+
+. The verdict of the last review round isn't `pass`, or there's no round yet.
+. The last verdict is `pass`, but `review_stale` is set because the proposal was edited after that review.
+. The stored `preflight` map is empty, because the pre-flight hasn't run or an edit cleared it.
+. The stored `preflight` has `ok` set to false.
+
+The check passes (`can_ready`) when the list is empty.
+`lifecycle.set_status` runs it when the target status is `ready` and refuses the change with the reasons when it fails.
+With `force`, the check is skipped, and the result lists that as a side effect.
+
+== The review verdict
+
+`review.record` decides the verdict from the scores, not from the reviewer's opinion.
+It reads three values from the profile's `rubric`: `scale_max` (default 5), `pass_average` (default 4.0), and `pass_min_criterion` (default 3.0).
+`PROFILE_DEFAULTS` in the profile library holds the same three values, and the KubeCon profile sets them too.
+
+First, `_validate` checks the reviewer's JSON.
+Every rubric criterion needs a numeric score between 0 and `scale_max` and a non-empty comment.
+Scores for ids that aren't criteria are dropped.
+
+Then the computation:
+
+. `average` is the mean of the criterion scores, rounded to two decimals.
+. `below_min` lists the criteria whose score is below `pass_min_criterion`.
+. The verdict is `pass` when `average >= pass_average` and `below_min` is empty, and `revise` otherwise.
+
+The reviewer's own `verdict` is lowercased and kept as `reviewer_verdict`; any value other than `pass` or `revise` becomes `revise`.
+It's stored with the round and has no effect on the computed verdict.
+Each round stores its number, date, scores, comments, both verdicts, the average, and up to five suggestions, and recording a round resets `review_stale` to false.
+The result of `review record` adds `below_min` and the two thresholds.
+
+== Character counts and limit statuses
+
+All counting goes through `cfplib/text.py`.
+`normalize` turns `\r\n` and `\r` into `\n` and strips whitespace at both ends.
+`count_chars` returns the number of Unicode code points in the normalized text.
+
+A field's `limit` passes through `coerce_limit` when the effective profile is built: anything that isn't a positive integer becomes no limit.
+The bio limit goes through the same function.
+Each limit also has a limit status, one of `unverified`, `page`, or `screenshot`; a field without one is treated as `unverified`.
+
+`limit_status` turns the count, the limit, and the limit status into the status of the count, checking in this order:
+
+[cols="1,3"]
+|===
+|Status |Condition
+
+|`no-limit`
+|The field has no limit.
+
+|`over`
+|The count is greater than the limit, whatever the limit status.
+
+|`unverified`
+|The count is within the limit, and the limit status is `unverified`.
+
+|`ok`
+|The count is within the limit, and the limit status is `page` or `screenshot`.
+|===
+
+A count equal to the limit is within it.
+`limit_result` returns the count as `chars`, the `limit`, the limit status as `limit_status` (null when there's no limit), and the computed `status`.
+
+`count_proposal` runs this for every field of the effective profile.
+It lists the fields with the status `over` in `over`, and the required fields with zero characters in `missing_required`.
+The bio is counted against the profile's bio limit.
+When the profile sets `bio_on_form: false`, the bio still gets a count but no limit, and its status is `not-on-form`.
