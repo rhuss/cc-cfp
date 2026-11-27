@@ -127,13 +127,14 @@ def _file_states(seed_profile_dir, target_dir, source="plugin"):
     files = []
     for rel in seed_files(seed_profile_dir):
         target = target_dir / rel
-        if not target.is_file():
-            files.append({"path": rel, "state": "missing"})
-            continue
+        # Read the seed side first, so a broken seed file is never offered as a takeable "missing" file.
         try:
             seed_text = _canonical(seed_profile_dir / rel)
         except CfpError as error:
             files.append({"path": rel, "state": "unreadable", "error": str(error)})
+            continue
+        if not target.is_file():
+            files.append({"path": rel, "state": "missing"})
             continue
         try:
             store_text = _canonical(target)
@@ -204,7 +205,8 @@ def status(store_path, seed_dir, user_dir=None):
     (the seed's ``seed_version`` is higher), ``newer``, ``local`` (the store
     profile has no ``seed_version``), ``unreadable`` (broken front matter).
     File states of an outdated profile: ``same``, ``changed`` (with a unified
-    ``diff`` from the store copy to the seed file), ``missing``. Each entry
+    ``diff`` from the store copy to the seed file), ``missing``,
+    ``unreadable`` (the seed file cannot be read; with an ``error``). Each entry
     also names its ``source`` (``plugin`` or ``user``) and ``seed_dir``.
     """
     return status_report(store_path, seed_dir, user_dir)[0]
@@ -223,9 +225,10 @@ def update(store_path, seed_dir, profile_id, files=None, all_files=False, user_d
 
     ``profile.md`` is always replaced, because it carries the version. Other
     seed files that differ or are missing are taken only when named in
-    ``files`` or with ``all_files``. Replaced profile and event files keep
-    the approval flag of the store copy. Nothing is written when the call is
-    refused.
+    ``files`` or with ``all_files``; ``all_files`` leaves unreadable seed
+    files out, and naming one in ``files`` refuses the call. Replaced profile
+    and event files keep the approval flag of the store copy. Nothing is
+    written when the call is refused.
     """
     profile_id = store.check_id(profile_id, "profile id")
     entries, warnings = collect(seed_dir, user_dir)
@@ -242,7 +245,8 @@ def update(store_path, seed_dir, profile_id, files=None, all_files=False, user_d
     states = {entry["path"]: entry["state"] for entry in info["files"]}
     open_files = [path for path, state in states.items() if path != PROFILE_FILE and state != "same"]
     if all_files:
-        chosen = set(open_files)
+        # "Everything" means every file that can be taken; unreadable seed files stay in "skipped".
+        chosen = {path for path in open_files if states[path] != "unreadable"}
     else:
         chosen = set()
         for rel in files or []:
@@ -274,9 +278,12 @@ def update(store_path, seed_dir, profile_id, files=None, all_files=False, user_d
             f"profile '{profile_id}' in the store contains symlinks ({', '.join(linked)}); "
             "replace them with regular files before updating"
         )
+    # Load every seed file before the first write, so a file that broke after the status check
+    # refuses the whole update instead of leaving it half applied.
+    loaded = {rel: frontmatter.load(seed_profile_dir / rel) for rel in writes}
     updated, added = [], []
     for rel in writes:
-        meta, body = frontmatter.load(seed_profile_dir / rel)
+        meta, body = loaded[rel]
         target = target_dir / rel
         existed = target.is_file()
         if existed and (rel == PROFILE_FILE or rel.startswith(APPROVED_PREFIXES)):

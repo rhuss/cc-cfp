@@ -11,6 +11,8 @@ voice profile, review rounds, default profile).
 import json
 import os
 import shutil
+import stat
+import tempfile
 from pathlib import Path
 
 from cfplib import CfpError, frontmatter, paths, seeds
@@ -119,21 +121,21 @@ def set_store_config(store, key, value):
 def _seed_profile(seed_profile_dir, target_dir):
     """Copy a seed profile into the store as regular files and mark it approved.
 
-    Only the files ``seeds.seed_files`` lists are copied, so symlinked event
-    or example files are skipped and the store copy never links back to the
-    seed (a later store write would otherwise change the user's own file).
-    The seed's ``profile.md`` is parsed before anything is written, so a
-    broken seed raises an error that names the seed file. The copy is built
-    in a hidden sibling folder and renamed into place, so a failure never
-    leaves a partial profile behind.
+    Only the files ``seeds.seed_files`` lists are copied, so symlinked
+    ``events/`` or ``examples/`` folders and files are skipped and the store
+    copy never links back to the seed (a later store write would otherwise
+    change the user's own file). The seed's ``profile.md`` is parsed before
+    anything is written, so a broken seed raises an error that names the
+    seed file. The copy is built in a unique hidden sibling folder and
+    renamed into place, so a failure never leaves a partial profile behind.
     """
     meta, body = frontmatter.load(seed_profile_dir / seeds.PROFILE_FILE)
     meta["approved"] = True
     meta["seed_version"] = str(meta.get("seed_version") or "")
-    staging = target_dir.with_name(f".{target_dir.name}.seeding")
-    if staging.exists():
-        shutil.rmtree(staging)
+    # A unique hidden sibling per call, so two inits running at once never share or delete each other's copy.
+    staging = Path(tempfile.mkdtemp(prefix=f".{target_dir.name}.", suffix=".seeding", dir=target_dir.parent))
     try:
+        os.chmod(staging, stat.S_IMODE(target_dir.parent.stat().st_mode))  # mkdtemp creates it private (0700)
         for rel in seeds.seed_files(seed_profile_dir):
             if rel == seeds.PROFILE_FILE:
                 continue

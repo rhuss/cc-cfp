@@ -325,10 +325,50 @@ def test_unreadable_seed_event_is_reported_and_refused(seeded_store, tmp_path):
     assert files[EU]["state"] == "unreadable" and str(seed / EU) in files[EU]["error"]
     before = (seeded_store / "profiles" / "kubecon" / "profile.md").read_bytes()
     with pytest.raises(CfpError, match="cannot be read: events/kubecon-eu-2027.md"):
+        seeds.update(seeded_store, SEED_DIR, "kubecon", files=[EU], user_dir=user_dir)
+    assert (seeded_store / "profiles" / "kubecon" / "profile.md").read_bytes() == before
+    result = seeds.update(seeded_store, SEED_DIR, "kubecon", all_files=True, user_dir=user_dir)
+    assert result["updated"] == ["profile.md"] and result["skipped"] == [EU]
+
+
+def test_unreadable_seed_file_missing_from_store_is_not_offered(seeded_store, tmp_path):
+    user_dir = tmp_path / "profiles"
+    seed = user_seed(user_dir, "kubecon")
+    (seeded_store / "profiles" / "kubecon" / EU).unlink()
+    (seed / EU).write_bytes(b"\xff\xfe not utf-8")
+    files = {f["path"]: f for f in kubecon(seeds.status(seeded_store, SEED_DIR, user_dir))["files"]}
+    assert files[EU]["state"] == "unreadable"
+    before = (seeded_store / "profiles" / "kubecon" / "profile.md").read_bytes()
+    with pytest.raises(CfpError, match="cannot be read"):
+        seeds.update(seeded_store, SEED_DIR, "kubecon", files=[EU], user_dir=user_dir)
+    assert (seeded_store / "profiles" / "kubecon" / "profile.md").read_bytes() == before
+    result = seeds.update(seeded_store, SEED_DIR, "kubecon", all_files=True, user_dir=user_dir)
+    assert result["skipped"] == [EU] and not (seeded_store / "profiles" / "kubecon" / EU).exists()
+
+
+def test_update_loads_every_seed_file_before_writing(seeded_store, tmp_path, monkeypatch):
+    user_dir = tmp_path / "profiles"
+    seed = user_seed(user_dir, "kubecon")
+    edit(seed / EU, lambda meta: meta.update(name="changed"))
+    real_load = frontmatter.load
+
+    def load(path):
+        if path == seed / EU:
+            raise CfpError(f"{path}: broke after the status check")
+        return real_load(path)
+
+    before = (seeded_store / "profiles" / "kubecon" / "profile.md").read_bytes()
+    real_status = seeds._profile_status
+
+    def status_then_break(*args):
+        info = real_status(*args)  # the seed file is still fine when the status is taken
+        monkeypatch.setattr(seeds.frontmatter, "load", load)
+        return info
+
+    monkeypatch.setattr(seeds, "_profile_status", status_then_break)
+    with pytest.raises(CfpError, match="broke after the status check"):
         seeds.update(seeded_store, SEED_DIR, "kubecon", all_files=True, user_dir=user_dir)
     assert (seeded_store / "profiles" / "kubecon" / "profile.md").read_bytes() == before
-    result = seeds.update(seeded_store, SEED_DIR, "kubecon", user_dir=user_dir)
-    assert result["updated"] == ["profile.md"]
 
 
 def test_hidden_staging_folder_is_not_a_profile(seeded_store):

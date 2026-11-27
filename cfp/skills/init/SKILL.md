@@ -76,7 +76,8 @@ The result has `seeds` and `warnings`. Show each entry of `warnings` that Step 5
 
 `seeds` has one entry per seed profile with `profile`, `state`, `store_version`, `seed_version`, `files`, `source` (`plugin` for a shipped profile, `user` for a personal one), and `seed_dir` (the folder it was read from). Act on `state`:
 
-- `current`, `missing`, `local`: nothing to do and nothing to say. (`missing` is copied by Step 5; `local` means the store profile has no `seed_version`, so it was researched or written by hand, or seeded from a personal profile without `seed_version`, and is never replaced.)
+- `missing`: nothing to do when Step 5 ran in this run (it copies missing profiles). When Step 5 did not run (the user chose `keep it as it is`), say that the `<profile>` profile from `seed_dir` is not in the store yet and that `re-run setup on it` copies it, for example after a skipped personal profile was fixed.
+- `current`, `local`: nothing to do and nothing to say. (`local` means the store profile has no `seed_version`, so it was researched or written by hand, or seeded from a personal profile without `seed_version`, and is never replaced.)
 - `newer` with `source: plugin`: say in one line that the store's `<profile>` profile comes from a newer plugin version than the installed one.
 - `newer` with `source: user`: say in one line that the store copy's `seed_version` is higher than your profile's, so there is nothing to update.
 - `unreadable`: show the `error` once.
@@ -85,7 +86,7 @@ The result has `seeds` and `warnings`. Show each entry of `warnings` that Step 5
 For an outdated profile:
 
 1. Say which seed is newer than the copy in the store, with both versions (`store_version` to `seed_version`): "the shipped `<profile>` profile" for `source: plugin`, "your personal `<profile>` profile in `<seed_dir>`" for `source: user`.
-2. For every entry in `files` with the state `changed`, print its path and then its `diff` in full in a fenced `diff` block. Explain once how to read it: lines starting with `-` are in the store now and would be replaced, lines starting with `+` come with the seed file (labeled `shipped/` or `user/`). Then list the files with the state `missing` (seed files, shipped or personal, that the store does not have). Files with the state `same` need nothing. Files with the state `unreadable` cannot be taken: show their `error` and leave them out of the `--files` choice.
+2. For every entry in `files` with the state `changed`, print its path and then its `diff` in full in a fenced `diff` block. Explain once how to read it: lines starting with `-` are in the store now and would be replaced, lines starting with `+` come with the seed file (labeled `shipped/` or `user/`). Then list the files with the state `missing` (seed files, shipped or personal, that the store does not have). Files with the state `same` need nothing. Files with the state `unreadable` cannot be taken: show their `error`, never name them in `--files`, and say that `update everything shown` leaves them out (the command lists them under `skipped`).
 3. Ask (AskUserQuestion) what to do:
    - `update everything shown`: offer it only when a file other than `profile.md` is changed or missing.
    - `update the profile only`: `profile.md` is replaced, the other files stay as they are.

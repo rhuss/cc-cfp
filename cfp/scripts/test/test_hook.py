@@ -177,7 +177,33 @@ def test_unreadable_store_yields_store_error(tmp_path):
     assert element(context, "store") == ""
     assert element(context, "store-initialized") == "false"
     error = element(context, "store-error")
-    assert error.startswith(f"cannot read {store / 'config.md'}:") and "ermission" in error
+    assert error.startswith(f"cannot access {store / 'config.md'}:") and "ermission" in error
+
+
+def test_store_check_does_not_rely_on_path_is_file(tmp_path, monkeypatch, capsys):
+    """Since Python 3.14 Path.is_file() returns False on a PermissionError; the hook must not depend on it."""
+    import importlib.util
+    import io
+    from pathlib import Path
+
+    spec = importlib.util.spec_from_file_location("cfp_context_hook", HOOK)
+    hook = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(hook)
+    for name in PATH_ENV_VARS:
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("CFP_STORE", str(tmp_path / "store"))
+    monkeypatch.setattr(Path, "is_file", lambda self: False)
+    def denied(path):
+        raise PermissionError(13, "Permission denied")
+
+    # Replace only the hook's own reference to os, not os.stat for the whole process.
+    monkeypatch.setattr(hook, "os", type("FakeOs", (), {"stat": staticmethod(denied)}))
+    monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps({"prompt": "/cfp:status"})))
+    assert hook.main() == 0
+    context = context_of(capsys.readouterr().out)
+    assert element(context, "store") == ""
+    assert element(context, "store-error") == f"cannot access {tmp_path / 'store' / 'config.md'}: Permission denied"
 
 
 def test_store_error_is_xml_escaped(tmp_path):

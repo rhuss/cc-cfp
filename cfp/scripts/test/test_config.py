@@ -224,6 +224,9 @@ def test_init_store_copies_symlinked_user_profile_as_regular_files(tmp_store, tm
 
     result = config.init_store(tmp_store, {"speaker_name": "A"}, seed_dir=SEED_DIR, user_seed_dir=user_dir)
     assert result["seeded_profiles"] == ["kubecon", "acme", "linked-folder"]
+    profiles_mode = (tmp_store / "profiles").stat().st_mode & 0o777
+    assert (tmp_store / "profiles" / "acme").stat().st_mode & 0o777 == profiles_mode  # not mkdtemp's 0700
+    assert not list((tmp_store / "profiles").glob(".*"))
     copied = tmp_store / "profiles" / "acme"
     assert not (copied / "profile.md").is_symlink() and (copied / "profile.md").is_file()
     assert not (copied / "examples").exists() and not (copied / "events" / "linked.md").exists()

@@ -25,4 +25,6 @@ Resolution error (invalid `CFP_CONFIG_DIR`, `CFP_STORE`, or `CFP_DATA_DIR` reach
 </cfp-context>
 ```
 
-The hook exits 0 in both cases. Skills (preamble Step 0): when `<store-error>` is present, show it with the hint to fix the variable and stop; do not offer `/cfp:init`.
+Store not accessible (the store resolved, but `os.stat` of `<store>/config.md` fails with an error other than "not found", for example folder permissions or a symlink loop): the same shape, with `<store-error>cannot access /abs/store/config.md: Permission denied</store-error>`. A store or `config.md` that does not exist is not an error; it gives `<store-initialized>false</store-initialized>`.
+
+The hook exits 0 in all cases. Skills (preamble Step 0): when `<store-error>` is present, show it and stop, with a hint to fix the variable it names or to check the named path; do not offer `/cfp:init`.

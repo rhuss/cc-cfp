@@ -187,7 +187,8 @@ a|* `--seed-dir <path>`, required: the shipped profiles
 * `--user-seed-dir <path>`: overrides the personal profiles folder (for tests)
 |`seeds`: one entry per seed profile, shipped or personal, with `profile`, `state`, `store_version`, `seed_version`, `files`, `source` (`plugin` or `user`), and `seed_dir` (the folder it was read from).
 States: `missing`, `current`, `outdated`, `newer`, `local`, `unreadable`.
-For an `outdated` profile, `files` lists each seed file as `same`, `changed` (with a `diff`), `missing`, or `unreadable` (with an `error`; `seed-update` refuses to take such a file).
+For an `outdated` profile, `files` lists each seed file as `same`, `changed` (with a `diff`), `missing`, or `unreadable` (with an `error`).
+`seed-update --all` leaves unreadable files out and lists them under `skipped`, and naming one in `--files` refuses the update before anything is written.
 The diff of a personal profile labels its side `user/<file>`, the diff of a shipped one `shipped/<file>`.
 `warnings`: one entry per personal profile that replaces a shipped one of the same name.
 Fails on an invalid `CFP_DATA_DIR`.

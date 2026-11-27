@@ -13,7 +13,9 @@ then ``<data folder>/store``). The hook runs as ``python3 -I``, which ignores
 
 The hook never exits non-zero for a ``/cfp:`` prompt. When resolution fails
 (for example a relative ``CFP_STORE``), ``<store>`` is empty, the store is
-reported as not initialized, and ``<store-error>`` carries the message.
+reported as not initialized, and ``<store-error>`` carries the message. The
+same happens when the store resolves but its ``config.md`` cannot be
+accessed (for example folder permissions or a symlink loop).
 """
 
 import datetime
@@ -65,7 +67,7 @@ def main():
         except (FileNotFoundError, NotADirectoryError):
             pass
         except OSError as os_error:  # for example a store in a folder the process may not read
-            error = f"cannot read {config_md}: {os_error.strerror or os_error}"
+            error = f"cannot access {config_md}: {os_error.strerror or os_error}"
             store = ""  # as for a resolution error: <store> is empty whenever <store-error> is present
     today = datetime.date.today().isoformat()
 
