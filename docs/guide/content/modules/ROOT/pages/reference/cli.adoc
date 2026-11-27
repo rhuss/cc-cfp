@@ -1,5 +1,495 @@
 = Store CLI
-:guide-no-sources:
 
-// STUB
-This page is written by a later task of the guide plan.
+// Sources:
+// cfp:cfp/scripts/cfp_store.py:1-9,39-41,67-70,76-267,273-281
+// cfp:cfp/scripts/cfp_store.py:287-309,315-368,374-423,429-502,508-517,523-563,569-576,582-603
+// cfp:cfp/skills/_shared/preamble.md:22-36
+// cfp:cfp/scripts/cfplib/config.py:15-28,39-45,48-69,106-169
+// cfp:cfp/scripts/cfplib/store.py:55-56
+// cfp:cfp/scripts/cfplib/profile.py:19,135-178,204-261,361-373,391-440,446-499
+// cfp:cfp/scripts/cfplib/seeds.py:89-128,139-193
+// cfp:cfp/scripts/cfplib/bios.py:5,11-68,85-146
+// cfp:cfp/scripts/cfplib/talks.py:5-18,29-85,107-157
+// cfp:cfp/scripts/cfplib/proposals.py:7,93-111,144-210,260-302,313-385
+// cfp:cfp/scripts/cfplib/text.py:34-52
+// cfp:cfp/scripts/cfplib/counts.py:6-36
+// cfp:cfp/scripts/cfplib/pasteview.py:28-82,118-124
+// cfp:cfp/scripts/cfplib/review.py:5-6,16-88,91-127,130-172
+// cfp:cfp/scripts/cfplib/preflight.py:8-12,206-275
+// cfp:cfp/scripts/cfplib/lifecycle.py:10-18,39-55,140-179
+
+`cfp/scripts/cfp_store.py` is the single CLI entry point for the cfp store.
+cfp's skills run every deterministic operation through it and never edit store files directly.
+You can also run it yourself from a clone of cc-cfp.
+xref:internals/architecture.adoc[Architecture] explains why the skills go through the CLI.
+This page lists every group, subcommand, and option, and the top-level keys each call returns.
+
+== Invocation
+
+[source,bash]
+----
+python3 -I cfp/scripts/cfp_store.py <group> <subcommand> [options]
+----
+
+A skill runs the same script as `python3 -I "$PLUGIN_ROOT/scripts/cfp_store.py"`.
+`count` and `pasteview` have no group and take `--proposal` directly.
+`preflight` runs with `--proposal` directly and has one subcommand, `add-finding`.
+`--help`, after the script name or after a group, prints argparse help text instead of JSON.
+
+The skills write long texts and free text to a file and pass the path with `--text-file` or `--from-json`.
+Only ids, dates, numbers, and values from a fixed option list go into flags.
+
+== Global options
+
+[cols="1,3"]
+|===
+|Option |Effect
+
+|`--store <path>`
+|The store to work on.
+Without it, the CLI takes the `CFP_STORE` environment variable, then the `store` value in `~/.config/cc-cfp/config.json`.
+With none of the three, the call fails with `no store configured`.
+
+|`--today <date>`
+|An ISO date (`YYYY-MM-DD`) used instead of the current date.
+In a subcommand that reads it, a value that is not an ISO date is a usage error.
+|===
+
+Both options are accepted before the group, after the group, and after the subcommand.
+
+Every subcommand except `config show` and `config init` needs an initialized store, that is, a store with a `config.md`.
+On any other store the call fails with `store not initialized`.
+
+These subcommands read `--today`: `profile list`, `profile show` (with `--event`), `event list`, `example add`, `bio write`, `talk write`, every `proposal` subcommand except `list` and `show`, `review record`, `preflight`, `preflight add-finding`, and `status set`.
+The other subcommands accept it and do not use it.
+
+== Output and exit codes
+
+Every subcommand call prints exactly one JSON object on stdout.
+On success it is `"ok": true` followed by the keys the tables below list.
+The one exception is `pasteview --format markdown`, which prints markdown.
+
+[cols="1,3"]
+|===
+|Exit code |Meaning
+
+|0
+|Success: `"ok": true`.
+
+|1
+|Domain error: `"ok": false` and an `error` text.
+An unexpected failure also exits with 1, with an `error` text that starts with `internal error`.
+
+|2
+|Usage error: `"ok": false` and an `error` text that starts with `usage error`.
+Unknown options, a missing subcommand, a missing required option, a bad `--today`, and malformed JSON in a flag are usage errors.
+|===
+
+The `list` subcommands and `preflight` also return `problems`, a list of `{path, error}` entries for store files with broken front matter.
+xref:internals/store.adoc[Store files] describes those files.
+
+Check: `config show` on a directory that is not a store reports it as missing and still succeeds.
+
+[source,bash]
+----
+python3 -I cfp/scripts/cfp_store.py config show --store /tmp/cfp-no-store; echo "exit=$?"
+----
+// expect: matches /"exists": false/ and contains "exit=0"
+
+Check: any other subcommand on that directory is a domain error.
+
+[source,bash]
+----
+python3 -I cfp/scripts/cfp_store.py profile list --store /tmp/cfp-no-store; echo "exit=$?"
+----
+// expect: contains "store not initialized" and contains "exit=1"
+
+[#config]
+== config
+
+Store configuration.
+
+[cols="1,2,2"]
+|===
+|Subcommand |Options |Returns
+
+|`show`
+|None.
+|`store`, `exists` (whether `config.md` exists), `config` (the stored values, or the defaults when there is no `config.md`).
+
+|`init`
+a|* `--speaker-name <name>`, required
+* `--speaker-company <name>`
+* `--voice-profile <name>`
+* `--review-rounds <n>`, an integer
+* `--default-profile <id>`
+* `--seed-dir <path>`
+|`store`, `created` (paths created), `seeded_profiles`.
+Creates the store folders and `config.md`, copies every seed profile from `--seed-dir` that the store does not have yet and marks it approved.
+Without a default profile, it takes the first profile id in sort order.
+It also writes the store path to `~/.config/cc-cfp/config.json`.
+
+|`set`
+a|* `--key <key>`, required
+* `--value <value>`, required
+|`key`, `value`.
+`review_rounds` must be an integer.
+|===
+
+[#profile]
+== profile
+
+Conference profiles.
+xref:internals/store.adoc[Store files] shows the profile and event files.
+
+[cols="1,2,2"]
+|===
+|Subcommand |Options |Returns
+
+|`list`
+|None.
+|`profiles` (id, name, platform, approved, seed version, and events of each), `problems`.
+
+|`show`
+a|* `--profile <id>`, required
+* `--event <id>`
+|The effective profile: `profile`, `event`, `session_types`, `fields`, `relevance_field`, `rubric`, `rules`, `rejection_reasons`, `submission_limit`, `bio_on_form`, `bio_limit`, `bio_limit_status`, `tracks`, `approved`, `drafting_guidance`, `notes`.
+With `--event`, the event's overrides are merged in and `event` holds `days_to_close`.
+
+|`validate`
+a|* `--profile <id>`, required
+* `--event <id>`
+|`valid`, `problems`.
+
+|`write`
+a|* `--profile <id>`, required
+* `--from-json <file>`, required
+|`path`.
+The JSON keys go into the profile's front matter, except `body`, `drafting_guidance`, and `notes`, which become body sections.
+An existing profile keeps its approval unless the JSON sets `approved`.
+
+|`approve`
+a|* `--profile <id>`, required
+* `--event <id>`: approve the event override instead
+* `--revoke`: set approval to false
+|`path`, `approved`.
+
+|`seed-status`
+a|* `--seed-dir <path>`, required
+|`seeds`: one entry per shipped seed profile with `profile`, `state`, `store_version`, `seed_version`, and `files`.
+States: `missing`, `current`, `outdated`, `newer`, `local`, `unreadable`.
+For an `outdated` profile, `files` lists each shipped file as `same`, `changed` (with a `diff`), or `missing`.
+
+|`seed-update`
+a|* `--profile <id>`, required
+* `--seed-dir <path>`, required
+* `--files <list>`: comma-separated shipped files to take besides `profile.md`, as `seed-status` prints them
+* `--all`: take every changed or missing shipped file
+
+`--files` and `--all` exclude each other.
+|`profile`, `from_version`, `to_version`, `updated`, `added`, `skipped`.
+Works only on an `outdated` profile.
+`profile.md` is always replaced.
+Replaced profile and event files keep the approval flag of the store copy.
+|===
+
+[#event]
+== event
+
+Event overrides of a profile.
+
+[cols="1,2,2"]
+|===
+|Subcommand |Options |Returns
+
+|`write`
+a|* `--profile <id>`, required
+* `--event <id>`, required
+* `--from-json <file>`, required
+|`path`.
+Approval comes from the JSON and defaults to false, so a rewritten override needs a new approval.
+
+|`list`
+a|* `--profile <id>`, required
+|`events` (id, name, location, dates, `approved`, number of tracks, `days_to_close`), `problems`.
+|===
+
+[#example]
+== example
+
+Calibration examples of a profile.
+
+[cols="1,2,2"]
+|===
+|Subcommand |Options |Returns
+
+|`add`
+a|* `--profile <id>`, required
+* `--from-json <file>`, required
+|`path`.
+The JSON needs `title`.
+It can hold `id`, `proposal`, `event`, `year`, `origin` (default `manual`), `abstract`, `benefits`, and `why`.
+
+|`list`
+a|* `--profile <id>`, required
+* `--limit <n>`: at most this many
+|`examples` (newest first), `problems`.
+|===
+
+[#bio]
+== bio
+
+Bio variations.
+
+[cols="1,2,2"]
+|===
+|Subcommand |Options |Returns
+
+|`list`
+|None.
+|`bios` (name, emphasis, target length, chars, updated), `problems`.
+
+|`show`
+a|* `--name <name>`, required
+|`name`, `emphasis`, `target_length`, `chars`, `updated`, `text`.
+
+|`write`
+a|* `--name <name>`, required
+* `--emphasis <text>`
+* `--target-length <n>`, an integer
+* `--text-file <file>`, required
+|`path`, `chars`.
+On an existing bio, an omitted `--emphasis` or `--target-length` keeps the stored value.
+
+|`delete`
+a|* `--name <name>`, required
+|`deleted` (the path).
+|===
+
+[#resource]
+== resource
+
+Speaker resources.
+
+[cols="1,2,2"]
+|===
+|Subcommand |Options |Returns
+
+|`list`
+a|* `--type <type>`: only this type
+|`resources` (id, type, title, link, date, notes), `problems`.
+
+|`write`
+a|* `--from-json <file>`, required
+|`path`, `id`.
+The JSON needs `title`, `link`, and `type`, one of `recording`, `repository`, `blog`, `session`, `publication`, `other`.
+It can hold `id`, `date`, `notes`, and `description`.
+Without `id`, the id is made from the title.
+
+|`delete`
+a|* `--id <id>`, required
+|`deleted` (the path).
+|===
+
+[#talk]
+== talk
+
+Talks.
+
+[cols="1,2,2"]
+|===
+|Subcommand |Options |Returns
+
+|`list`
+a|* `--status <status>`: only this status
+|`talks` (id, title, status, updated, proposals, last presented date), `problems`.
+
+|`show`
+a|* `--talk <id>`, required
+|The talk's front matter keys, at least `id`, `title`, `status`, `created`, `updated`, `personas`, `projects`, `resources`, `outings`, `source_material`, and `sections`.
+
+|`write`
+a|* `--talk <id>`: the talk to write
+* `--from-json <file>`, required
+|`path`, `id`, `created` (true for a new talk).
+A new talk needs `title`.
+Without `--talk` and without `id` in the JSON, the id is made from the title.
+`sections` takes the headings `Problem`, `Contribution`, `Takeaways`, `What is new`, and `Story notes`; the other keys go into the front matter.
+Outing dates must be ISO dates.
+
+|`complete`
+a|* `--talk <id>`, required
+|`complete`, `missing` (empty story sections), `missing_meta` (`personas` when there are none).
+|===
+
+[#proposal]
+== proposal
+
+Proposals.
+A call that changes the content of a `ready` proposal moves it back to `draft` and adds `reset_to_draft: true` to its result.
+This applies to `set-field`, `set-bio-text`, and `set-meta`.
+
+[cols="1,2,2"]
+|===
+|Subcommand |Options |Returns
+
+|`list`
+a|* `--status <status>`
+* `--event <id>`
+* `--talk <id>`
+
+Each given option filters the list.
+|`proposals` (id, talk, title, profile, event, session type, status, and dates), sorted by status, `problems`.
+
+|`show`
+a|* `--proposal <id>`, required
+|The proposal's front matter keys, `fields` (text per field id), and `bio`.
+
+|`create`
+a|* `--talk <id>`, required
+* `--profile <id>`, required
+* `--event <id>`, required
+* `--session-type <id>`, required
+* `--angle <text>`
+|`path`, `id` (`<event>--<talk>`).
+Needs an existing talk, an approved profile and event, a session type of the event, and no proposal with that id yet.
+
+|`set-field`
+a|* `--proposal <id>`, required
+* `--field <id>`, required
+* `--text-file <file>`, required
+|`field`, `chars`, `limit`, `limit_status`, `status`.
+
+|`set-meta`
+a|* `--proposal <id>`, required
+* `--from-json <file>`: a JSON object with any of the keys `track`, `audience_level`, `bio`, `resources`, `co_speakers`, `co_speaker_genders`, `angle`, `session_type`
+* `--track <value>`
+* `--audience-level <value>`
+* `--bio <name>`: a bio variation, copied into the proposal
+* `--resources <ids>`: comma-separated resource ids; an empty string clears them
+* `--co-speakers <json>`: a JSON list, for example `["Name, Company"]`
+* `--co-speaker-genders <json>`: a JSON list of strings
+* `--angle <text>`
+* `--session-type <id>`
+
+Flags win over the file.
+|`updated` (the keys set).
+
+|`set-bio-text`
+a|* `--proposal <id>`, required
+* `--text-file <file>`, required
+|`chars`, `limit`, `limit_status`, `status`, `on_form`.
+
+|`mark-voice-pass`
+a|* `--proposal <id>`, required
+|`voice_pass: true`.
+|===
+
+`status` in the results of `set-field`, `set-bio-text`, `count`, and `pasteview` is one of `ok`, `over`, `unverified`, `no-limit`, or `not-on-form` for a bio the form does not have.
+xref:internals/rules.adoc#character-counts-and-limit-statuses[How rules and verdicts are computed] explains the counts.
+
+[#count]
+== count and pasteview
+
+These two have no group.
+
+[cols="1,2,2"]
+|===
+|Command |Options |Returns
+
+|`count`
+a|* `--proposal <id>`, required
+|`proposal`, `event`, `fields` (count and limit status per field), `bio`, `over` (field ids over their limit), `missing_required` (required fields not drafted).
+
+|`pasteview`
+a|* `--proposal <id>`, required
+* `--format <format>`: `json` (default) or `markdown`
+|With `json`: `proposal`, `talk`, `profile`, `event`, `event_name`, `session_type`, `status`, `fields` (in form order, with text, counts, and flags), `bio`, `over`, `missing_required`, `warnings`.
+With `markdown`: the paste view as markdown text instead of JSON.
+|===
+
+[#review]
+== review
+
+Committee review rounds.
+
+[cols="1,2,2"]
+|===
+|Subcommand |Options |Returns
+
+|`packet`
+a|* `--proposal <id>`, required
+* `--examples <n>`: calibration examples to include, default 3
+|`packet`: what the reviewer agent reads, with the rubric, thresholds, fields, bio, resources, talk, and examples.
+
+|`record`
+a|* `--proposal <id>`, required
+* `--from-json <file>`, required: the reviewer's JSON
+|`round`, `verdict`, `reviewer_verdict`, `average`, `below_min`, `thresholds`, `suggestions`.
+The JSON needs `scores` and `comments` with one entry per rubric criterion.
+It can hold `suggestions` (a list of `{field, text}`, at most five are kept) and `verdict` (`pass` or `revise`).
+
+|`history`
+a|* `--proposal <id>`, required
+|`rounds`.
+|===
+
+xref:internals/rules.adoc#the-review-verdict[How rules and verdicts are computed] explains how `verdict` is computed.
+
+[#preflight]
+== preflight
+
+The hard rule check.
+In the results of both calls, `ok` means the call succeeded and `passed` is the rule verdict: true when no finding has severity `disqualify`.
+Both calls store the result on the proposal.
+
+[cols="1,2,2"]
+|===
+|Call |Options |Returns
+
+|`preflight`
+a|* `--proposal <id>`, required
+|`passed`, `findings`, `manual` (rules the code does not compute), `problems`.
+
+|`preflight add-finding`
+a|* `--proposal <id>`, required
+* `--from-json <file>`: a JSON object with any of the keys `rule`, `severity`, `text`, `source`
+* `--rule <id>`
+* `--severity <severity>`: `disqualify` or `warn`
+* `--text <text>`
+* `--source <text>`
+
+Flags win over the file.
+`rule` and `text` are required, as flags or in the file.
+`severity` is required only for a rule id that is not in the profile; a profile rule brings its own.
+|`passed`, `findings` (all stored findings, the new one included).
+|===
+
+xref:internals/rules.adoc[How rules and verdicts are computed] describes every rule and the stored pre-flight result.
+
+[#status]
+== status
+
+The proposal lifecycle.
+
+[cols="1,2,2"]
+|===
+|Subcommand |Options |Returns
+
+|`set`
+a|* `--proposal <id>`, required
+* `--to <status>`, required: `draft`, `ready`, `submitted`, `accepted`, `presented`, `rejected`, or `withdrawn`
+* `--date <date>`: an ISO date, default today
+* `--force`: set `ready` without the ready check
+|`from`, `to`, `date`, `side_effects`.
+The move must be one of the transitions the lifecycle allows.
+`accepted` adds the proposal as a calibration example, and `presented` records an outing on the talk.
+`draft` clears `ready_on` and marks the review and pre-flight results stale.
+
+|`ready-check`
+a|* `--proposal <id>`, required
+|`can_ready`, `reasons`.
+|===
+
+xref:internals/rules.adoc#the-ready-check[How rules and verdicts are computed] lists what the ready check requires.
+xref:reference/commands.adoc[Commands] lists the slash commands that call these subcommands for you.

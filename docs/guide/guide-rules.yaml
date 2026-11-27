@@ -197,3 +197,15 @@ rules:
       - 'cfp:committee-review'
       - '--screenshots'
       - 'reopen'
+  - glob: "content/modules/ROOT/pages/reference/cli.adoc"
+    require:
+      - 'python3 -I'
+      - '--store'
+      - '--today'
+      - 'seed-status'
+      - 'seed-update'
+      - 'add-finding'
+      - 'ready-check'
+      - 'pasteview'
+      - 'set-bio-text'
+      - 'mark-voice-pass'
