@@ -10,15 +10,15 @@
 // cfp:cfp/scripts/cfplib/profile.py:18-19
 // cfp:cfp/scripts/cfplib/text.py:6-15,34-52
 // cfp:cfp/scripts/cfplib/proposals.py:260-264,280-292
-// cfp:cfp/scripts/cfplib/counts.py:13-26
-// cfp:cfp/scripts/cfplib/lifecycle.py:10-13,29,39-55
+// cfp:cfp/scripts/cfplib/counts.py:13-35
+// cfp:cfp/scripts/cfplib/lifecycle.py:10-13,29,39-55,161-162
 // cfp:cfp/scripts/cfplib/pasteview.py:8-25,28-82,85-115
 // cfp:cfp/scripts/cfp_store.py:3-8,222-227,512-517
 // cfp:cfp/knowledge-base/profiles/kubecon/profile.md:157-203,213-214
 // cfp:cfp/skills/status/SKILL.md:37-52
 // visual:paste-view
 
-A strong abstract doesn't help much if the form rejects it for a missing track or a title that's nine characters too long.
+A strong abstract doesn't help much when the track is wrong or the title is nine characters over its limit.
 The pre-flight catches that kind of problem before you open the conference form.
 It checks your proposal against the conference's rules, counts the characters of every field against its limit, and tells you whether the proposal can become `ready`.
 At the end, the paste view gives you every field in form order with its count, ready to copy.
@@ -115,7 +115,7 @@ xref:user/review.adoc[Committee review and voice pass] explains how the reviewer
 Before counting, cfp turns Windows line endings into plain line breaks and strips whitespace from the start and end of the text.
 Then it counts Unicode code points, so a German sharp s or an emoji counts as one character.
 
-Each count gets one of four statuses:
+Each field count gets one of four statuses:
 
 [cols="1,3"]
 |===
@@ -249,8 +249,7 @@ The reviewer-only "Value to the community" field has 295 characters and no limit
 After the last field, the paste view ends with a speaker bio section: its heading names the bio variation when one is set, followed by the count label, the flags, and the text.
 When the form has no speaker bio, that section is left out entirely, because there's nothing to paste.
 
-Need the paste view again later?
-`/cfp:draft --proposal <id>` prints it, and you can also print it from your cc-cfp clone.
+To see the paste view again later, run `/cfp:draft --proposal <id>` on a finished proposal, or print it from your cc-cfp clone.
 
 Check: the paste view of Ada's proposal starts with its heading.
 
