@@ -59,6 +59,15 @@ def collect(plugin_dir, user_dir=None):
     if user_dir is not None and Path(user_dir).is_dir():
         index = {entry["name"]: i for i, entry in enumerate(entries)}
         for folder in _profile_folders(user_dir):
+            try:
+                store.check_id(folder.name, "profile id")
+            except CfpError:
+                # The folder name becomes a store path and a skill's shell argument, so it must be a safe id.
+                warnings.append(
+                    f"profile folder '{folder.name}' in {user_dir} skipped: "
+                    "a profile name starts with a letter or digit and uses only letters, digits, '.', '_', and '-'"
+                )
+                continue
             user_entry = {"name": folder.name, "dir": folder, "source": "user"}
             if folder.name in index:
                 shipped = entries[index[folder.name]]["dir"]
@@ -72,11 +81,13 @@ def collect(plugin_dir, user_dir=None):
     return entries, warnings
 
 
-def _seed_files(seed_profile_dir):
+def seed_files(seed_profile_dir):
     """Relative paths of the files a seed ships: profile.md, events/*.md, examples/*.md.
 
-    Symlinks are skipped, as in the initial copy, so a stray link in a seed
-    directory cannot pull foreign files into the store.
+    These are exactly the files ``config init`` copies. Symlinked event and
+    example files or folders are skipped, so a stray link in a seed directory
+    cannot pull foreign files into the store; ``profile.md`` is read through
+    a link. The store copy is always made of regular files.
     """
     files = [PROFILE_FILE]
     for sub in SEED_SUBDIRS:
@@ -114,7 +125,7 @@ def _diff(store_text, seed_text, rel, source="plugin"):
 
 def _file_states(seed_profile_dir, target_dir, source="plugin"):
     files = []
-    for rel in _seed_files(seed_profile_dir):
+    for rel in seed_files(seed_profile_dir):
         target = target_dir / rel
         if not target.is_file():
             files.append({"path": rel, "state": "missing"})
@@ -134,9 +145,16 @@ def _file_states(seed_profile_dir, target_dir, source="plugin"):
 
 def _profile_status(store_path, seed_profile_dir, source="plugin"):
     profile_id = seed_profile_dir.name
-    seed_meta, _ = frontmatter.load(seed_profile_dir / PROFILE_FILE)
+    info = {"profile": profile_id, "state": "", "store_version": None, "seed_version": None, "files": []}
+    try:
+        seed_meta, _ = frontmatter.load(seed_profile_dir / PROFILE_FILE)
+    except CfpError as error:
+        # A broken seed (typically a hand-written personal profile) must not hide the other seeds.
+        info["state"] = "unreadable"
+        info["error"] = str(error)
+        return info
     seed_version = str(seed_meta.get("seed_version") or "")
-    info = {"profile": profile_id, "state": "", "store_version": None, "seed_version": seed_version, "files": []}
+    info["seed_version"] = seed_version
     target_dir = store.profile_dir(store_path, profile_id)
     target = target_dir / PROFILE_FILE
     if not target.is_file():
@@ -234,8 +252,20 @@ def update(store_path, seed_dir, profile_id, files=None, all_files=False, user_d
             chosen.add(rel)
 
     target_dir = store.profile_dir(store_path, profile_id)
+    writes = [PROFILE_FILE] + [path for path in open_files if path in chosen]
+    linked = [
+        str(path)
+        for path in [target_dir] + [target_dir / sub for sub in SEED_SUBDIRS] + [target_dir / rel for rel in writes]
+        if path.is_symlink()
+    ]
+    if linked:
+        # frontmatter.save writes through a link, which would change a file outside the store.
+        raise CfpError(
+            f"profile '{profile_id}' in the store contains symlinks ({', '.join(linked)}); "
+            "replace them with regular files before updating"
+        )
     updated, added = [], []
-    for rel in [PROFILE_FILE] + [path for path in open_files if path in chosen]:
+    for rel in writes:
         meta, body = frontmatter.load(seed_profile_dir / rel)
         target = target_dir / rel
         existed = target.is_file()

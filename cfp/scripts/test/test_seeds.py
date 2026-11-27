@@ -299,6 +299,30 @@ def test_update_user_only_profile_and_unknown_name(seeded_store, tmp_path):
     assert str(info.value) == f"no seed profile 'nope' in {SEED_DIR} or {user_dir}"
 
 
+def test_update_refuses_to_write_through_a_symlinked_store_copy(seeded_store, tmp_path):
+    user_dir = tmp_path / "profiles"
+    user_seed(user_dir, "kubecon")
+    outside = tmp_path / "outside.md"
+    target = seeded_store / "profiles" / "kubecon" / "profile.md"
+    outside.write_bytes(target.read_bytes())
+    target.unlink()
+    target.symlink_to(outside)
+    before = outside.read_bytes()
+    assert kubecon(seeds.status(seeded_store, SEED_DIR, user_dir))["state"] == "outdated"
+    with pytest.raises(CfpError, match="contains symlinks"):
+        seeds.update(seeded_store, SEED_DIR, "kubecon", user_dir=user_dir)
+    assert outside.read_bytes() == before
+
+
+def test_collect_skips_user_folder_with_unsafe_name(tmp_path):
+    user_dir = tmp_path / "profiles"
+    user_seed(user_dir, "acme-summit")
+    user_seed(user_dir, "$(touch x)")
+    entries, warnings = seeds.collect(SEED_DIR, user_dir)
+    assert [e["name"] for e in entries] == ["kubecon", "acme-summit"]
+    assert len(warnings) == 1 and warnings[0].startswith(f"profile folder '$(touch x)' in {user_dir} skipped:")
+
+
 def test_seed_cli_with_user_profiles(seeded_store, run_cli, tmp_path):
     user_dir = tmp_path / "profiles"
     user_seed(user_dir, "kubecon", version=LATER)

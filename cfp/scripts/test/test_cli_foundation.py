@@ -142,6 +142,11 @@ def test_config_init_warns_when_cfp_store_overrides(tmp_home, tmp_path, run_cli)
     assert same["warnings"] == []
     from_env = run_cli("config", "init", "--speaker-name", "A", env={"CFP_STORE": str(other)})
     assert from_env["store"] == str(other.resolve()) and from_env["warnings"] == []
+    relative = run_cli("config", "init", "--store", chosen, "--speaker-name", "A", env={"CFP_STORE": "talks"})
+    assert relative["warnings"] == [
+        "CFP_STORE must be an absolute path, got 'talks'; "
+        "later commands without --store fail until CFP_STORE is fixed or unset"
+    ]
 
 
 def test_usage_error_exits_2(run_cli):

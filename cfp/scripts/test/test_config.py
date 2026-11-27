@@ -208,3 +208,74 @@ def test_init_store_missing_user_dir_or_none_is_silent(tmp_store, tmp_home, tmp_
     assert not (tmp_path / "missing").exists()
     result = config.init_store(tmp_store, {"speaker_name": "A"}, seed_dir=SEED_DIR)
     assert result["seeded_profiles"] == [] and result["warnings"] == []
+
+
+def test_init_store_copies_symlinked_user_profile_as_regular_files(tmp_store, tmp_home, tmp_path):
+    from cfplib import frontmatter
+
+    real = _user_seed(tmp_path / "dotfiles", "acme", "2026-01-01")
+    source_text = (real / "profile.md").read_text(encoding="utf-8")
+    user_dir = tmp_path / "profiles"
+    (user_dir / "acme" / "events").mkdir(parents=True)
+    (user_dir / "acme" / "profile.md").symlink_to(real / "profile.md")
+    (user_dir / "acme" / "examples").symlink_to(real / "examples", target_is_directory=True)
+    (user_dir / "acme" / "events" / "linked.md").symlink_to(real / "events" / "kubecon-eu-2027.md")
+    (user_dir / "linked-folder").symlink_to(real, target_is_directory=True)
+
+    result = config.init_store(tmp_store, {"speaker_name": "A"}, seed_dir=SEED_DIR, user_seed_dir=user_dir)
+    assert result["seeded_profiles"] == ["kubecon", "acme", "linked-folder"]
+    copied = tmp_store / "profiles" / "acme"
+    assert not (copied / "profile.md").is_symlink() and (copied / "profile.md").is_file()
+    assert not (copied / "examples").exists() and not (copied / "events" / "linked.md").exists()
+    assert frontmatter.load(copied / "profile.md")[0]["approved"] is True
+    folder_copy = tmp_store / "profiles" / "linked-folder"
+    assert not folder_copy.is_symlink() and (folder_copy / "events" / "kubecon-eu-2027.md").is_file()
+    assert (real / "profile.md").read_text(encoding="utf-8") == source_text
+
+
+def test_init_store_skips_user_folder_with_unsafe_name(tmp_store, tmp_home, tmp_path):
+    user_dir = tmp_path / "profiles"
+    _user_seed(user_dir, "bad name;x", "2026-01-01")
+    result = config.init_store(tmp_store, {"speaker_name": "A"}, seed_dir=SEED_DIR, user_seed_dir=user_dir)
+    assert result["seeded_profiles"] == ["kubecon"]
+    assert len(result["warnings"]) == 1 and result["warnings"][0].startswith(
+        f"profile folder 'bad name;x' in {user_dir} skipped:"
+    )
+    assert not (tmp_store / "profiles" / "bad name;x").exists()
+    assert config.load_store_config(tmp_store)["default_profile"] == "kubecon"
+
+
+def test_init_store_skips_broken_user_profile_without_partial_copy(tmp_store, tmp_home, tmp_path):
+    from cfplib import seeds
+
+    user_dir = tmp_path / "profiles"
+    broken = _user_seed(user_dir, "acme", "2026-01-01")
+    good_text = (broken / "profile.md").read_bytes()
+    (broken / "profile.md").write_bytes(b"\xff\xfe not utf-8")
+    _user_seed(user_dir, "zeta", "2026-01-01")
+
+    result = config.init_store(tmp_store, {"speaker_name": "A"}, seed_dir=SEED_DIR, user_seed_dir=user_dir)
+    assert result["seeded_profiles"] == ["kubecon", "zeta"]
+    assert len(result["warnings"]) == 1
+    assert result["warnings"][0].startswith(f"profile 'acme' from {broken} skipped:")
+    assert str(broken / "profile.md") in result["warnings"][0]
+    assert not (tmp_store / "profiles" / "acme").exists()
+    assert not list((tmp_store / "profiles").glob(".*"))
+    assert config.load_user_config()["store"] == str(tmp_store.resolve())
+
+    listing = {s["profile"]: s for s in seeds.status(tmp_store, SEED_DIR, user_dir)}
+    assert listing["acme"]["state"] == "unreadable" and str(broken / "profile.md") in listing["acme"]["error"]
+    assert listing["kubecon"]["state"] == "current" and listing["zeta"]["state"] == "current"
+
+    (broken / "profile.md").write_bytes(good_text)
+    again = config.init_store(tmp_store, {"speaker_name": "A"}, seed_dir=SEED_DIR, user_seed_dir=user_dir)
+    assert again["seeded_profiles"] == ["acme"] and again["warnings"] == []
+
+
+def test_broken_shipped_seed_still_fails_without_partial_copy(tmp_store, tmp_home, tmp_path):
+    plugin_dir = tmp_path / "plugin"
+    shipped = _user_seed(plugin_dir, "kubecon", "2026-01-01")
+    (shipped / "profile.md").write_bytes(b"\xff\xfe not utf-8")
+    with pytest.raises(CfpError):
+        config.init_store(tmp_store, {"speaker_name": "A"}, seed_dir=plugin_dir)
+    assert not list((tmp_store / "profiles").iterdir())

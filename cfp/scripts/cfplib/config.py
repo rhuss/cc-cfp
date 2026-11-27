@@ -9,6 +9,7 @@ voice profile, review rounds, default profile).
 """
 
 import json
+import os
 import shutil
 from pathlib import Path
 
@@ -115,18 +116,34 @@ def set_store_config(store, key, value):
 
 
 def _seed_profile(seed_profile_dir, target_dir):
-    """Copy a seed profile directory into the store and mark it approved.
+    """Copy a seed profile into the store as regular files and mark it approved.
 
-    Symlinks are copied as links, never followed, so a stray link in a seed
-    directory cannot pull foreign files into the store.
+    Only the files ``seeds.seed_files`` lists are copied, so symlinked event
+    or example files are skipped and the store copy never links back to the
+    seed (a later store write would otherwise change the user's own file).
+    The seed's ``profile.md`` is parsed before anything is written, so a
+    broken seed raises an error that names the seed file. The copy is built
+    in a hidden sibling folder and renamed into place, so a failure never
+    leaves a partial profile behind.
     """
-    shutil.copytree(seed_profile_dir, target_dir, symlinks=True)
-    profile_file = target_dir / "profile.md"
-    if profile_file.is_file():
-        meta, body = frontmatter.load(profile_file)
-        meta["approved"] = True
-        meta["seed_version"] = str(meta.get("seed_version") or "")
-        frontmatter.save(profile_file, meta, body)
+    meta, body = frontmatter.load(seed_profile_dir / seeds.PROFILE_FILE)
+    meta["approved"] = True
+    meta["seed_version"] = str(meta.get("seed_version") or "")
+    staging = target_dir.with_name(f".{target_dir.name}.seeding")
+    if staging.exists():
+        shutil.rmtree(staging)
+    try:
+        for rel in seeds.seed_files(seed_profile_dir):
+            if rel == seeds.PROFILE_FILE:
+                continue
+            destination = staging / rel
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes((seed_profile_dir / rel).read_bytes())
+        frontmatter.save(staging / seeds.PROFILE_FILE, meta, body)
+        os.replace(staging, target_dir)
+    except BaseException:
+        shutil.rmtree(staging, ignore_errors=True)
+        raise
 
 
 def init_store(store, values, seed_dir=None, user_seed_dir=None):
@@ -154,9 +171,16 @@ def init_store(store, values, seed_dir=None, user_seed_dir=None):
     entries, warnings = seeds.collect(seed_dir or None, user_seed_dir)
     for entry in entries:
         target = store / "profiles" / entry["name"]
-        if target.exists():
+        if target.exists() or target.is_symlink():
             continue
-        _seed_profile(entry["dir"], target)
+        try:
+            _seed_profile(entry["dir"], target)
+        except (CfpError, OSError) as error:
+            if entry["source"] != "user":
+                raise
+            # A hand-written personal profile must not stop the setup; the user fixes it and runs init again.
+            warnings.append(f"profile '{entry['name']}' from {entry['dir']} skipped: {error}")
+            continue
         seeded.append(entry["name"])
         created.append(str(target))
 

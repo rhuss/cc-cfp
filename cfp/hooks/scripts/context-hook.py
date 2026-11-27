@@ -54,7 +54,12 @@ def main():
         return 0
 
     store, error = resolve_store()
-    initialized = bool(store) and (Path(store) / "config.md").is_file()
+    try:
+        initialized = bool(store) and (Path(store) / "config.md").is_file()
+    except OSError as os_error:  # for example a store in a folder the process may not read
+        initialized = False
+        error = f"cannot read {Path(store) / 'config.md'}: {os_error.strerror or os_error}"
+        store = ""  # as for a resolution error: <store> is empty whenever <store-error> is present
     today = datetime.date.today().isoformat()
 
     lines = [

@@ -311,7 +311,8 @@ def _cfp_store_warning(store):
     """Warn when CFP_STORE names another store than the one being saved.
 
     Paths are compared after ``~`` expansion and resolution. A relative
-    CFP_STORE (an error for later commands) also differs, so it warns too.
+    CFP_STORE does not override anything; later commands without ``--store``
+    fail on it, so it gets its own warning.
     """
     raw = os.environ.get("CFP_STORE", "").strip()
     if not raw:
@@ -319,8 +320,8 @@ def _cfp_store_warning(store):
     try:
         if paths.env_store().resolve() == Path(store):
             return []
-    except CfpError:
-        pass
+    except CfpError as error:
+        return [f"{error}; later commands without --store fail until CFP_STORE is fixed or unset"]
     return [f"CFP_STORE is set to '{raw}' and overrides the saved store '{store}' in later sessions"]
 
 
