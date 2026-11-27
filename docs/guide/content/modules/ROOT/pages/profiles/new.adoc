@@ -30,12 +30,10 @@ Its only network access during research is public CFP pages, reviewer guideline 
 From the CFP page it follows links only to pages on the same host, or on a host you named.
 For any other host it asks you first.
 
-The submission form itself is a different story.
 When a submission link redirects to a login, cfp never fetches it further.
 That covers Sessionize `submit` links, pretalx `submit` links, and any sign-in page.
 Instead, cfp stops, tells you the form is login-walled, and asks you for screenshots.
 
-That's why screenshots matter so much.
 The form usually sits behind a login, so screenshots of the live form are the most reliable source a profile can have.
 You can pass them as files or paste them into the conversation.
 For a pasted image without a file name, cfp asks you for a label such as `pasted-1`.
@@ -106,6 +104,7 @@ The sections come in this order:
 `cfp` skips this section when there's no event.
 .. Rules and rubric: each rule with its kind, severity, text, and source, then the rubric's scale, pass thresholds, and criteria.
 .. Rejection reasons and the speaker bio: whether the form asks for a bio with each submission (`bio_on_form`) and, when it does, the bio limit.
+
 +
 After each section cfp asks one question: approve, edit, or re-research?
 On edit, it asks what to change, applies it, and shows the section again.
@@ -121,7 +120,7 @@ It validates both and fixes the data until the validation passes.
 Then it approves the profile and the event, and it prints both file paths and the profile as `/cfp:profile show` renders it.
 
 The validation checks the structure of the data.
-It reports, among other things, a field or rule without an id, an id used twice, an unknown field kind, rule kind, severity, or label, and a limit that isn't a positive whole number.
+It reports, among other things, a field or rule without an id, an id used twice, an unknown field kind, rule kind, severity, or verification label (`limit_status`), and a limit that isn't a positive whole number.
 For the event it also reports an empty track list (the track checks can't run without one) and a date that isn't an ISO date.
 When something's wrong, cfp shows you the problems before it fixes them.
 
@@ -166,7 +165,7 @@ xref:user/preflight.adoc[Pre-flight, counts, and the paste view] shows how the v
 
 === A rule for one session type
 
-When a rule covers only one session type, the rule gets `params.session_type` with that type's id.
+When a rule covers only one session type, the rule gets `params.session_type` naming that session type.
 The pre-flight then applies it only to proposals of that session type.
 The ExampleConf rule above would look like this in the profile data:
 
