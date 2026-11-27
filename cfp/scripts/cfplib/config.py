@@ -1,16 +1,18 @@
 """User-level and store-level configuration.
 
-User config: ``~/.config/cc-cfp/config.json`` holding ``{"store": path}``.
+User config: ``config.json`` in the config folder (``CFP_CONFIG_DIR``, else
+``$XDG_CONFIG_HOME/cc-cfp``, else ``~/.config/cc-cfp``, with the feature 001
+file as a read-only legacy fallback), holding ``{"store": path}``. All
+location rules live in ``cfplib.paths``; this module only reads and writes.
 Store config: ``<store>/config.md`` front matter (speaker name, company,
 voice profile, review rounds, default profile).
 """
 
 import json
-import os
 import shutil
 from pathlib import Path
 
-from cfplib import CfpError, frontmatter
+from cfplib import CfpError, frontmatter, paths
 
 STORE_DIRS = ("profiles", "talks", "proposals", "bios", "resources")
 DEFAULT_STORE_CONFIG = {
@@ -24,35 +26,33 @@ INT_KEYS = {"review_rounds"}
 
 
 def user_config_path():
-    return Path.home() / ".config" / "cc-cfp" / "config.json"
+    """The config file the next write goes to (it may not exist yet)."""
+    return paths.config_file()
 
 
 def load_user_config():
-    """Return the user config dict, or {} when missing or malformed."""
-    try:
-        data = json.loads(user_config_path().read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return {}
-    return data if isinstance(data, dict) else {}
+    """Return the user config dict in effect, or {} when missing or malformed."""
+    return paths.read_config()[0]
 
 
 def write_user_config(store):
-    path = user_config_path()
+    """Save the store path, keeping unknown keys of the file that was read."""
+    path = paths.config_file()
+    data = dict(paths.read_config()[0])
     path.parent.mkdir(parents=True, exist_ok=True)
-    data = load_user_config()
     data["store"] = str(Path(store).expanduser().resolve())
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
     return path
 
 
+def resolve_store_with_source(cli_store):
+    """Return ``(store, source)``; see ``cfplib.paths.resolve_store``."""
+    return paths.resolve_store(cli_store)
+
+
 def resolve_store(cli_store):
-    """Resolution order: --store, env CFP_STORE, user config file."""
-    candidate = cli_store or os.environ.get("CFP_STORE", "").strip() or load_user_config().get("store", "")
-    if not candidate:
-        raise CfpError(
-            "no store configured: pass --store, set CFP_STORE, or run 'config init' (or /cfp:init)"
-        )
-    return Path(candidate).expanduser().resolve()
+    """Resolution order: --store, CFP_STORE, the config file, then ``<data folder>/store``."""
+    return paths.resolve_store(cli_store)[0]
 
 
 def store_config_path(store):

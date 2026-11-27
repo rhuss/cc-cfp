@@ -11,16 +11,54 @@ from conftest import SEED_DIR
 
 def test_resolve_store_prefers_cli_then_env_then_user_config(tmp_home, monkeypatch, tmp_path):
     monkeypatch.delenv("CFP_STORE", raising=False)
-    with pytest.raises(CfpError):
-        config.resolve_store(None)
+    default = tmp_home / ".local" / "share" / "cc-cfp" / "store"
+    assert config.resolve_store(None) == default
+    assert config.resolve_store_with_source(None) == (default, "default")
 
     config.write_user_config(tmp_path / "from-file")
     assert config.resolve_store(None) == (tmp_path / "from-file").resolve()
+    assert config.resolve_store_with_source(None)[1] == "config"
 
     monkeypatch.setenv("CFP_STORE", str(tmp_path / "from-env"))
     assert config.resolve_store(None) == (tmp_path / "from-env").resolve()
+    assert config.resolve_store_with_source(None)[1] == "environment"
 
     assert config.resolve_store(str(tmp_path / "from-cli")) == (tmp_path / "from-cli").resolve()
+    assert config.resolve_store_with_source(str(tmp_path / "from-cli"))[1] == "argument"
+
+
+def test_user_config_writes_go_to_xdg_and_leave_legacy_untouched(tmp_home, monkeypatch, tmp_path):
+    legacy = tmp_home / ".config" / "cc-cfp" / "config.json"
+    legacy.parent.mkdir(parents=True)
+    legacy.write_text(json.dumps({"store": str(tmp_path / "old"), "keep": "me"}))
+    before = legacy.read_bytes()
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "cfg"))
+
+    assert config.user_config_path() == tmp_path / "cfg" / "cc-cfp" / "config.json"
+    assert config.load_user_config()["store"] == str(tmp_path / "old")
+    assert config.resolve_store(None) == (tmp_path / "old").resolve()
+
+    written = config.write_user_config(tmp_path / "new")
+    assert written == tmp_path / "cfg" / "cc-cfp" / "config.json"
+    data = json.loads(written.read_text())
+    assert data == {"store": str((tmp_path / "new").resolve()), "keep": "me"}
+    assert legacy.read_bytes() == before
+    assert config.resolve_store(None) == (tmp_path / "new").resolve()
+
+
+def test_user_config_follows_cfp_config_dir(tmp_home, monkeypatch, tmp_path):
+    monkeypatch.setenv("CFP_CONFIG_DIR", str(tmp_path / "conf"))
+    written = config.write_user_config(tmp_path / "s")
+    assert written == tmp_path / "conf" / "config.json"
+    assert not (tmp_home / ".config").exists()
+
+
+def test_write_user_config_replaces_malformed_file(tmp_home, tmp_path):
+    path = tmp_home / ".config" / "cc-cfp" / "config.json"
+    path.parent.mkdir(parents=True)
+    path.write_text("not json")
+    config.write_user_config(tmp_path / "s")
+    assert json.loads(path.read_text()) == {"store": str((tmp_path / "s").resolve())}
 
 
 def test_user_config_lives_under_home(tmp_home, tmp_path):

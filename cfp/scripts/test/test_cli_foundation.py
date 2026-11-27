@@ -40,14 +40,18 @@ def test_missing_store_is_domain_error(tmp_store, run_cli):
     assert result.data["ok"] is False and "config init" in result.data["error"]
 
 
-def test_no_store_configured_at_all(tmp_store, run_cli, monkeypatch):
+def test_nothing_configured_uses_default_store(tmp_store, tmp_home, run_cli):
+    default = tmp_home / ".local" / "share" / "cc-cfp" / "store"
     env = dict(os.environ)
     env.pop("CFP_STORE", None)
     completed = subprocess.run(
         [sys.executable, "-I", str(CLI), "profile", "list"], capture_output=True, text=True, env=env
     )
     data = json.loads(completed.stdout)
-    assert completed.returncode == 1 and data["ok"] is False and "store" in data["error"]
+    assert completed.returncode == 1 and data["ok"] is False
+    assert "store not initialized" in data["error"] and str(default) in data["error"]
+    shown = run_cli("config", "show", env={"CFP_STORE": None})
+    assert shown["store"] == str(default) and shown["exists"] is False
 
 
 def test_usage_error_exits_2(run_cli):
