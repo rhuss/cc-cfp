@@ -200,7 +200,7 @@ xref:reference/cli.adoc[Store CLI] lists the groups and subcommands.
 
 === The output contract
 
-Every call prints exactly one JSON object on stdout.
+Every subcommand call prints exactly one JSON object on stdout.
 The one exception is `pasteview --format markdown`, which prints markdown.
 
 * Success: `"ok": true` plus the result fields, exit code 0.
@@ -209,7 +209,7 @@ The one exception is `pasteview --format markdown`, which prints markdown.
 
 The `main` function keeps that contract on unexpected failures too.
 Any other exception becomes `"ok": false` with an `internal error` text and exit code 1.
-The preamble tells the skills how to read the exit codes: 1 is a domain error to show you, 2 is a mistake in the skill's own call that the skill fixes.
+The preamble tells the skills how to read a failed call: they show you the error on either code, and for 2, a mistake in the skill's own call, the skill fixes the call.
 
 You can see the contract from a clone of the repository.
 
