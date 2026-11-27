@@ -1,7 +1,8 @@
 = Using cfp
 
 // Sources:
-// cfp:README.md:5,36-41,45-56,59,75
+// cfp:README.md:3,5,17,36-41,45-56,59,75
+// cfp:cfp/knowledge-base/profiles/kubecon/events/kubecon-eu-2027.md:2
 // cfp:cfp/scripts/cfplib/talks.py:5-6
 // cfp:cfp/scripts/cfplib/store.py:55-56
 // cfp:cfp/scripts/cfplib/proposals.py:151-154,295-303,305-311,352-363
@@ -10,9 +11,15 @@
 // cfp:cfp/scripts/cfplib/lifecycle.py:90-119,122-137,166-169
 // cfp:cfp/skills/draft/SKILL.md:118,127
 // cfp:cfp/skills/bio/SKILL.md:76,92
+// cfp:cfp/skills/committee-review/SKILL.md:12,28-34
+// prose:prose/skills/humanizer/SKILL.md:4-10
+// url:https://code.claude.com/docs/en/overview
 
-This section takes one talk idea all the way to a proposal you can paste into a conference form.
-You'll draft every field with `/cfp:draft`, let a simulated program committee score the result, check it against the conference's rules and character limits, and copy the finished texts from the paste view into the conference site yourself.
+`cfp` is a plugin for Claude Code, an AI-powered coding assistant, and it drafts conference talk proposals and speaker bios with you in a conversation, using reusable conference profiles.
+Every conference has its own form, with its own fields, limits, and rules, and this section shows you how cfp drafts a proposal for one.
+You'll take one talk idea all the way to a proposal you can paste into the form.
+You type `/cfp:draft` in Claude Code, draft every field, let a simulated program committee score the result, and check it against the conference's rules and character limits.
+At the end you copy the finished texts from the paste view, the final output that lists each field with its character count, into the conference site yourself.
 Along the way you collect material that outlives the proposal: the story of your talk, your speaker bios, and links to your recordings and other work.
 The story is stored once, independent of any conference.
 When you want to give the same talk somewhere else, `/cfp:draft` starts from that stored talk and renders it for the new conference's form.
@@ -25,7 +32,7 @@ The pages of this section keep coming back to a handful of terms, and the store 
 
 A *talk* is the conference-independent story of your session: the problem, your contribution, the takeaways, who it's for, what's new about it, and its earlier outings.
 
-A *proposal* is that talk rendered for one conference edition, field by field, together with its committee review rounds and pre-flight results.
+A *proposal* is that talk rendered for one conference edition, field by field, together with its committee review rounds and the results of its pre-flight, the check against the conference's rules.
 There's one proposal per talk and edition, and its file name joins the two.
 Ada Example's talk `build-cache` at the KubeCon EU 2027 edition becomes the proposal `kubecon-eu-2027--build-cache`.
 
@@ -36,15 +43,16 @@ It holds the edition's overrides of the profile: dates, tracks, the submission l
 A *bio variation* is one named version of your speaker bio, written in the third person, with its own emphasis and target length.
 When you pick a variation for a proposal, cfp copies its text into the proposal.
 That copy is the proposal's bio snapshot.
-Shortening it or running the voice pass changes only the snapshot, never the stored variation, and deleting the variation later doesn't change stored proposals.
+Shortening it or running the voice pass (a rewrite through the optional cc-prose plugin that removes signs of AI-generated writing) changes only the snapshot, never the stored variation, and deleting the variation later doesn't change stored proposals.
 
 A *speaker resource* is a titled link of one of six types: `recording`, `repository`, `blog`, `session`, `publication`, or `other`.
 A proposal stores the resources you choose for it.
-Recordings get special treatment: reviewers score the Speaker criterion higher when a talk recording is linked, so `/cfp:draft` offers recordings first.
+Recordings get special treatment: reviewers score the Speaker criterion higher when a talk recording is linked, so `/cfp:draft` offers recordings first when it fills a form's resources field.
 
 Your *store* holds all of this.
 It has a `config.md` file with your speaker settings and five folders: `profiles`, `talks`, `proposals`, `bios`, and `resources`.
-Each profile has its own folder under `profiles`, with its events and its calibration examples (accepted texts and official samples) inside.
+Each profile has its own folder under `profiles`, with its events and its calibration examples inside.
+Calibration examples are accepted texts and official samples, and the committee review puts some of them into what the reviewer reads.
 Every file is plain markdown with YAML front matter, and you can edit it by hand as long as the front matter stays valid.
 
 image::store-model.svg["Your store: config.md, talks, proposals, bios, and resources in blue, and a profile folder with profile.md, events, and examples in orange; a proposal links to its talk and its event by id, keeps a bio snapshot, references resources by id, and an event overrides its profile; a config file in your home directory holds the store path",role=expand]
@@ -58,7 +66,7 @@ Setting it to `presented` records an outing on its talk.
 == Your path through this section
 
 Read the pages in order the first time.
-`/cfp:draft` takes you from idea to paste view in one conversation, and the first page follows it all the way.
+`/cfp:draft` takes you from idea to paste view in one conversation in Claude Code, and the first page follows it all the way.
 The next two pages slow down on two stretches of that conversation, the committee review and the final checks.
 You don't need a bio before your first draft: when your store has none, `/cfp:draft` offers to write one and then continues.
 Come back to the bios page when you want to manage bios and resources on their own.
