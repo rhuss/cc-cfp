@@ -31,7 +31,7 @@ The simulated committee review runs as a separate reviewer that sees only a pack
 
 **Why this combination.**
 A conference's form, limits, scoring criteria, and rules are stored as data, and every limit carries a label that says whether it was confirmed on the form, read from a public page, or is unverified (`cfp:cfp/skills/profile/SKILL.md:32-40`).
-Character counts and rule checks come from a script, and the committee verdict is computed from the profile's thresholds instead of taken from the reviewer's own opinion (`cfp:cfp/scripts/cfplib/text.py:13-15`, `cfp:cfp/scripts/cfplib/review.py:139-141`).
+Character counts and the rule checks cfp has an evaluator for come from a script (a rule that fits none of its built-in kinds is judged in the conversation, and the sales-pitch rule is left to the committee review: `cfp:cfp/skills/_shared/preflight-checks.md:39-54`, `cfp:cfp/scripts/cfplib/preflight.py:8-11`), and the committee verdict is computed from the profile's thresholds instead of taken from the reviewer's own opinion (`cfp:cfp/scripts/cfplib/text.py:13-15`, `cfp:cfp/scripts/cfplib/review.py:139-141`).
 One talk serves several conferences, because the story is stored once and rendered for each conference edition (`cfp:README.md:5`).
 The sources do not compare cfp with drafting in a plain chat session, so the card states cfp's properties and makes no comparison.
 
