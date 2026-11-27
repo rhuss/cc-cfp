@@ -2,7 +2,7 @@
 
 // Sources:
 // cfp:README.md:3,45,50-52
-// cfp:cfp/knowledge-base/guidance/profile-research.md:5,9-12,39,46,50-54,97,99
+// cfp:cfp/knowledge-base/guidance/profile-research.md:5,9-12,26,39,46,50-54,97,99
 // cfp:cfp/knowledge-base/profiles/kubecon/profile.md:5,239
 // cfp:cfp/knowledge-base/profiles/kubecon/events/kubecon-eu-2027.md:2-3,9
 // cfp:cfp/knowledge-base/profiles/kubecon/events/kubecon-na-2026.md:2-3
@@ -41,7 +41,7 @@ It holds the edition's overrides: name, location, dates, CFP open and close with
 Dates, tracks, location, and per-edition session type variations always go into the event, never into the profile.
 An event's id is the profile id followed by the edition, such as `kubecon-eu-2027`.
 
-*Examples* are calibration texts, accepted texts and official samples, and the committee review puts some of them, three by default, into what the reviewer reads.
+*Examples* are calibration texts (accepted texts and official samples), and the simulated committee review puts some of them, three by default, into what the reviewer reads.
 xref:user/review.adoc#calibration[Accepted proposals as calibration examples] explains how they get there.
 
 Each profile has its own folder under `profiles` in your store, with one markdown file per profile, event, and example.
@@ -59,7 +59,7 @@ To get the form of one edition, cfp merges the event onto its profile:
 
 * A session type or field in the event updates the profile's entry with the same id, changing only the keys the event sets, or is added when the profile has no such entry.
 An event can also remove a session type.
-* The event's tracks become the options of the `track` field.
+* The event's tracks, when it lists any, become the options of the `track` field.
 * The event's submission limit replaces the profile's, when the event sets one.
 * The rubric, the rules, the rejection reasons, and the bio settings always come from the profile.
 
@@ -78,7 +78,7 @@ xref:reference/schema.adoc[Profile and event schema] lists every key.
 
 A profile and an event each carry an `approved` flag, and a file without it counts as unapproved.
 `/cfp:profile` shows you its research one section at a time and asks whether to approve, edit, or re-research it.
-It writes a section's data only after you approved that section, and it sets the flag once every section is approved.
+For a new conference it writes the profile once you approved every section, and it sets the flag then.
 When you refresh a profile for a new edition, the new event is written unapproved and approved only after you went through all its sections.
 
 `cfp` treats a profile with an event as approved only when both are.
