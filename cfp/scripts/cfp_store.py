@@ -26,6 +26,7 @@ from cfplib import (  # noqa: E402
     profile,
     proposals,
     review,
+    seeds,
     talks,
 )
 from cfplib import text as textutil  # noqa: E402
@@ -119,6 +120,17 @@ def build_parser():
     p.add_argument("--profile", required=True)
     p.add_argument("--event", default=None)
     p.add_argument("--revoke", action="store_true")
+    p = sub(g, "seed-status", cmd_profile_seed_status, "compare the shipped seed profiles with the store")
+    p.add_argument("--seed-dir", required=True)
+    p = sub(g, "seed-update", cmd_profile_seed_update, "replace an outdated store profile with the shipped seed")
+    p.add_argument("--profile", required=True)
+    p.add_argument("--seed-dir", required=True)
+    choice = p.add_mutually_exclusive_group()
+    choice.add_argument(
+        "--files", default=None,
+        help="comma-separated shipped files to take besides profile.md (paths as seed-status prints them)",
+    )
+    choice.add_argument("--all", action="store_true", help="take every changed or missing shipped file")
 
     # event
     g = group("event", "event overrides")
@@ -325,6 +337,15 @@ def cmd_profile_write(args):
 
 def cmd_profile_approve(args):
     return profile.approve(ctx_store(args), args.profile, event_id=args.event, approved=not args.revoke)
+
+
+def cmd_profile_seed_status(args):
+    return {"seeds": seeds.status(ctx_store(args), args.seed_dir)}
+
+
+def cmd_profile_seed_update(args):
+    files = [part.strip() for part in (args.files or "").split(",") if part.strip()]
+    return seeds.update(ctx_store(args), args.seed_dir, args.profile, files=files, all_files=args.all)
 
 
 def cmd_event_write(args):

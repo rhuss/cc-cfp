@@ -24,13 +24,15 @@ Optional: the `prose` plugin from [cc-prose](https://github.com/rhuss/cc-prose) 
 
 Asks for the store path (default `~/Obsidian/<vault>/Talks` when an Obsidian vault exists, else `~/cfp-store`), your name, company, a voice profile, and the maximum number of committee review rounds. It creates the store, writes `~/.config/cc-cfp/config.json` with the store path, and copies the shipped KubeCon profile into the store as an approved profile.
 
+Run `/cfp:init` again after a plugin update. The store keeps its own copy of the shipped profile, and when the shipped one is newer, `/cfp:init` shows the differences and offers to update the copy. The update replaces whole files, keeps the approval of the profile and its events, and never touches events or examples you added yourself.
+
 The store is resolved in this order: `--store <path>` on a CLI call, the `CFP_STORE` environment variable, then `~/.config/cc-cfp/config.json`. Set `CFP_STORE` to point a session at a second store without rewriting the config file; the context hook honours it too.
 
 ## Commands
 
 | Command | What it does |
 |---|---|
-| `/cfp:init [--store <path>]` | First-use setup and seed profile copy |
+| `/cfp:init [--store <path>]` | First-use setup and seed profile copy; on later runs, the update of a shipped profile that a newer plugin version brought |
 | `/cfp:draft [--profile <id>] [--event <id>] [--talk <id>] [--proposal <id>] [--from <path or URL>]` | Interactive drafting from an idea, existing material, a stored talk, or an old proposal: story interview, title and abstract angles, every form field, committee review loop, voice pass, pre-flight, paste view |
 | `/cfp:bio [new \| list \| edit <name> \| delete <name> \| resource add \| resource list \| resource delete <id>]` | Bio variations (third person, with character counts) and speaker resources (recordings, repositories, blog posts, prior sessions) |
 | `/cfp:profile [new <name or URL> \| refresh <id> [--event <id>] [--screenshots <paths>] \| show <id> \| list]` | Research a conference's public CFP pages and form screenshots into a profile, refresh an edition's event override, inspect profiles and deadlines |
