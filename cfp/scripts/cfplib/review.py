@@ -26,6 +26,7 @@ def packet(store_path, proposal_id, examples=3):
             {
                 "id": field_id,
                 "label": field.get("label", field_id),
+                "kind": field.get("kind", "text"),
                 "audience": field.get("audience", "public"),
                 "required": bool(field.get("required", False)),
                 "text": texts.get(field_id, ""),
@@ -76,7 +77,10 @@ def packet(store_path, proposal_id, examples=3):
             "audience_level": meta.get("audience_level"),
             "angle": meta.get("angle"),
             "fields": fields,
-            "bio": proposals.bio_text(body),
+            "relevance_field": eff.get("relevance_field"),
+            # A reviewer sees no bio when the form has none, so the packet carries none.
+            "bio_on_form": bool(eff.get("bio_on_form", True)),
+            "bio": proposals.bio_text(body) if eff.get("bio_on_form", True) else "",
             "resources": resources,
             "co_speakers": meta.get("co_speakers") or [],
             "talk": talk_info,

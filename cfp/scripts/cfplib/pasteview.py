@@ -51,9 +51,11 @@ def build(store_path, proposal_id):
             }
         )
     bio_info = dict(counted["bio"])
-    bio_info["text"] = proposals.bio_text(body)
+    bio_on_form = bio_info.get("on_form", True)
+    # Nothing to paste when the form has no bio: no text and no flags.
+    bio_info["text"] = proposals.bio_text(body) if bio_on_form else ""
     bio_info["variation"] = meta.get("bio_variation")
-    bio_info["flags"] = _flags(counted["bio"])
+    bio_info["flags"] = _flags(counted["bio"]) if bio_on_form else []
     warnings = []
     unverified = [f["id"] for f in fields if f["limit"] is not None and f["limit_status"] == "unverified"]
     if unverified or (bio_info["limit"] is not None and bio_info["limit_status"] == "unverified"):
@@ -100,6 +102,8 @@ def to_markdown(data):
         lines.append(field["text"] if field["text"] else "(empty)")
         lines.append("")
     bio = data["bio"]
+    if not bio.get("on_form", True):
+        return "\n".join(lines)
     variation = f" (variation: {bio['variation']})" if bio.get("variation") else ""
     lines.append(f"## Speaker bio{variation}")
     lines.append("")

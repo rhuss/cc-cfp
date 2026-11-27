@@ -54,7 +54,7 @@ If a screenshot list was given, Read each image and extract field labels, their 
 
 ### Step 3: Build the draft
 
-Build one profile JSON following the schema of the shipped KubeCon profile (keys listed under "Draft JSON shape" below). Use the snake_case field ids from the guidance file (`title`, `abstract`, `benefits`, `audience_level`, `track`, `format`, ...). Fill `## Drafting guidance` with what reviewers reward and punish, the pass behavior assumption when no number was published, and any historic limits with the URL they came from.
+Build one profile JSON following the schema of the shipped KubeCon profile (keys listed under "Draft JSON shape" below). Use the snake_case field ids from the guidance file (`title`, `abstract`, `value_to_community`, `audience_level`, `track`, `format`, ...). Fill `## Drafting guidance` with what reviewers reward and punish, the pass behavior assumption when no number was published, and any historic limits with the URL they came from.
 
 Build an event override JSON as well when the input names a specific edition: a year in the name or URL, or `--event`. Dates, tracks, location, and per-edition session type variations go into the override, never into the family profile.
 
@@ -68,7 +68,7 @@ Show the sections in this order, each item with its value and label, then ask (A
 2. Fields and limits: `abstract: longtext, required, limit 1300 [unverified]`, options and audience per field.
 3. Tracks and dates (event override): tracks, event dates, CFP open and close with timezone, notification, location, submission limit.
 4. Rules and rubric: each rule with kind, severity, text, source; rubric scale, thresholds, criteria.
-5. Rejection reasons and bio limit.
+5. Rejection reasons and the speaker bio: whether the form asks for a bio with each submission (`bio_on_form`) and, when it does, the bio limit.
 
 On edit, ask what to change (one question), apply it, and show the section again. On re-research, go back to the sources for that section only (fetch again or ask for a screenshot), then show it again. Skip section 3 when there is no event override.
 
@@ -124,11 +124,11 @@ Run `python3 -I "$PLUGIN_ROOT/scripts/cfp_store.py" profile show --profile <id> 
 
 - Header: profile name, platform, profile approval; when an event is given, its name, location, dates, CFP open and close with timezone, notification, `days_to_close` (say "closed" when negative), and event approval; `approved` from the result is the combined status.
 - Session types: table with id, name, duration, min and max speakers, notes.
-- Fields: table with id, label, kind, required, limit, limit_status, audience (options listed under the table for choice kinds).
+- Fields: table with id, label, kind, required, limit, limit_status, audience (options listed under the table for choice kinds). Below the table name the reviewer-only relevance field from `relevance_field`, or say that the form has none when it is null.
 - Rubric: scale, pass average, pass minimum criterion, then each criterion with its description.
 - Rules: table with id, kind, severity, source (shortened URL or `screenshot:<file>` or empty).
 - Tracks: the list from the event override, or "no event chosen" without `--event`.
-- Rejection reasons, bio limit with its status, and the drafting guidance text in full.
+- Rejection reasons, the bio line ("no bio on the form" when `bio_on_form` is false, otherwise the bio limit with its status), and the drafting guidance text in full.
 
 ## Subaction: list
 
@@ -153,10 +153,12 @@ Report `problems` once (path and error) and tell the user how to continue: `/cfp
   "rubric": {"scale_max": 5, "pass_average": 4.0, "pass_min_criterion": 3.0, "criteria": [{"id": "content", "name": "Content", "description": "1 star is unclear, 5 stars is polished with high-impact takeaways."}]},
   "rules": [{"id": "submission-limit", "kind": "submission_limit", "severity": "disqualify", "params": {"max": 3}, "source": "https://...", "text": "Max 3 proposals per speaker per event."}],
   "rejection_reasons": ["Vendor or product pitch"],
-  "bio_limit": 500, "bio_limit_status": "unverified",
+  "bio_on_form": true, "bio_limit": 500, "bio_limit_status": "unverified",
   "body": {"Drafting guidance": "Free prose the draft skill reads.", "Notes": "Conflicts and assumptions."}
 }
 ```
+
+Set `"bio_on_form": false` when the form asks for no speaker bio with a submission (the screenshots show the complete form without one). The draft flow then attaches no bio and the paste view prints none. Leave it `true` when in doubt.
 
 `event write --from-json` input:
 

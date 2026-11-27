@@ -159,7 +159,7 @@ def test_set_bio_text_replaces_only_snapshot(with_proposal):
     bios.write_bio(s, "short", "cloud-native", 450, "Original stored bio.", today=TODAY)
     proposals.set_meta(s, pid, bio="short", today=TODAY)
     result = proposals.set_bio_text(s, pid, "Shortened snapshot.", today=TODAY)
-    assert result == {"chars": 19, "limit": 500, "limit_status": "screenshot", "status": "ok"}
+    assert result == {"chars": 19, "limit": 500, "limit_status": "screenshot", "status": "ok", "on_form": True}
     assert proposals.show(s, pid)["bio"] == "Shortened snapshot."
     assert proposals.show(s, pid)["bio_variation"] == "short"
     assert bios.show_bio(s, "short")["text"] == "Original stored bio."

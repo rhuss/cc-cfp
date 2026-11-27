@@ -44,7 +44,7 @@ def test_count_proposal_statuses(seeded_store, pid):
     assert by_id["resources"]["required"] is False
     assert result["over"] == ["title"]
     assert result["missing_required"] == ["value_to_community", "audience_level", "track", "format", "case_study", "previously_presented"]
-    assert result["bio"] == {"chars": 501, "limit": 500, "limit_status": "screenshot", "status": "over", "drafted": True}
+    assert result["bio"] == {"chars": 501, "limit": 500, "limit_status": "screenshot", "status": "over", "on_form": True, "drafted": True}
     assert result["proposal"] == pid
 
 
@@ -101,6 +101,20 @@ def test_count_bio_without_limit(seeded_store, pid):
     frontmatter.save(path, meta, body)
     result = counts.count_proposal(s, pid)
     assert result["bio"]["status"] == "no-limit" and result["bio"]["drafted"] is False
+
+
+def test_count_bio_not_on_form(seeded_store, pid):
+    s = seeded_store
+    bios.write_bio(s, "b", "ai", 500, "y" * 501, today=TODAY)
+    proposals.set_meta(s, pid, bio="b", today=TODAY)
+    path = store.profile_path(s, "kubecon")
+    meta, body = frontmatter.load(path)
+    meta["bio_on_form"] = False
+    frontmatter.save(path, meta, body)
+    result = counts.count_proposal(s, pid)
+    # a stored snapshot is counted but never measured against a limit the form does not have
+    assert result["bio"] == {"chars": 501, "limit": None, "limit_status": None, "status": "not-on-form", "on_form": False, "drafted": True}
+    assert result["over"] == []
 
 
 def test_count_cli(seeded_store, pid, run_cli):

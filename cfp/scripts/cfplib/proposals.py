@@ -278,8 +278,18 @@ def set_field(store_path, proposal_id, field_id, text, today=None):
 
 
 def bio_result(eff, text):
-    """Count a bio snapshot against the profile's bio limit; shared by set-bio-text and count."""
-    return textutil.limit_result(textutil.count_chars(text), eff.get("bio_limit"), eff.get("bio_limit_status", "unverified"))
+    """Count a bio snapshot against the profile's bio limit; shared by set-bio-text and count.
+
+    ``on_form`` is false when the profile says the form has no speaker bio
+    (``bio_on_form: false``). A stored snapshot is still counted then, but it
+    has no limit and the status is ``not-on-form``.
+    """
+    chars = textutil.count_chars(text)
+    if not eff.get("bio_on_form", True):
+        return {"chars": chars, "limit": None, "limit_status": None, "status": "not-on-form", "on_form": False}
+    result = textutil.limit_result(chars, eff.get("bio_limit"), eff.get("bio_limit_status", "unverified"))
+    result["on_form"] = True
+    return result
 
 
 def set_bio_text(store_path, proposal_id, text, today=None):

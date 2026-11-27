@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "cfp",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "description": "Draft conference talk proposals (CFP submissions) and speaker bios interactively, using reusable conference profiles",
       "author": {
         "name": "Roland Huss"

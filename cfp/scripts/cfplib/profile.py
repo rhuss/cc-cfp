@@ -33,6 +33,7 @@ PROFILE_DEFAULTS = {
     "rubric": {"scale_max": 5, "pass_average": 4.0, "pass_min_criterion": 3.0, "criteria": []},
     "rules": [],
     "rejection_reasons": [],
+    "bio_on_form": True,
     "bio_limit": None,
     "bio_limit_status": "unverified",
 }
@@ -55,6 +56,30 @@ EVENT_DEFAULTS = {
     "field_overrides": [],
 }
 PROFILE_SECTIONS = ("Drafting guidance", "Notes")
+# Reviewer-only longtext fields with their own drafting rule; never the relevance field.
+RELEVANCE_EXCLUDED_IDS = ("previously_presented", "resources")
+
+
+def relevance_field_id(fields):
+    """Id of the reviewer-only relevance field (why the talk belongs on the schedule), or None.
+
+    An older form's ``benefits`` field wins when the form has one. Otherwise it
+    is the first field in form order with ``audience: reviewer`` and
+    ``kind: longtext`` whose id has no drafting rule of its own
+    (``previously_presented``, ``resources``). The draft skill, the committee
+    review packet, and the accepted-example capture all use this one answer.
+    """
+    fields = [field for field in (fields or []) if isinstance(field, dict)]
+    if any(field.get("id") == "benefits" for field in fields):
+        return "benefits"
+    for field in fields:
+        if (
+            field.get("audience") == "reviewer"
+            and field.get("kind") == "longtext"
+            and field.get("id") not in RELEVANCE_EXCLUDED_IDS
+        ):
+            return field.get("id")
+    return None
 
 
 def _as_list(value):
@@ -219,10 +244,14 @@ def effective(profile, event):
         "event": event_info,
         "session_types": session_types,
         "fields": fields,
+        "relevance_field": relevance_field_id(fields),
         "rubric": copy.deepcopy(profile.get("rubric") or {}),
         "rules": copy.deepcopy(profile.get("rules") or []),
         "rejection_reasons": list(profile.get("rejection_reasons") or []),
         "submission_limit": submission_limit,
+        # Only an explicit false switches the bio off; an unusable value is a
+        # validation problem and must not hide the bio by accident.
+        "bio_on_form": profile.get("bio_on_form") is not False,
         "bio_limit": textutil.coerce_limit(profile.get("bio_limit")),
         "bio_limit_status": profile.get("bio_limit_status") or "unverified",
         "tracks": tracks,
@@ -298,6 +327,8 @@ def validate(store_path, profile_id, event_id=None):
         seen.add(criterion["id"])
     if profile.get("bio_limit_status", "unverified") not in LIMIT_STATUSES:
         problems.append(f"unknown bio_limit_status {profile.get('bio_limit_status')!r}")
+    if not isinstance(profile.get("bio_on_form", True), bool):
+        problems.append(f"bio_on_form must be true or false, got {profile.get('bio_on_form')!r}")
 
     if event_id:
         try:

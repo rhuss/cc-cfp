@@ -38,6 +38,36 @@ def test_effective_merge_with_seed_event(seeded_store):
     assert "Seeded from" in eff["notes"]
 
 
+def test_relevance_field_id_rules():
+    def field(field_id, audience="reviewer", kind="longtext"):
+        return {"id": field_id, "audience": audience, "kind": kind}
+
+    kubecon_like = [
+        field("title", "public", "text"), field("abstract", "public"), field("value_to_community"),
+        field("previously_presented"), field("resources"),
+    ]
+    assert profile.relevance_field_id(kubecon_like) == "value_to_community"
+    # an older form's benefits field wins wherever it sits
+    assert profile.relevance_field_id([field("notes"), field("benefits")]) == "benefits"
+    # fields with their own drafting rule are never the relevance field
+    assert profile.relevance_field_id([field("previously_presented"), field("resources"), field("why_this_talk")]) == "why_this_talk"
+    assert profile.relevance_field_id([field("resources", kind="resources"), field("previously_presented")]) is None
+    # public fields and short text fields do not qualify
+    assert profile.relevance_field_id([field("abstract", "public"), field("notes", kind="text")]) is None
+    assert profile.relevance_field_id([]) is None
+    assert profile.relevance_field_id(None) is None
+
+
+def test_effective_names_the_relevance_field(seeded_store):
+    eff = profile.load_effective(seeded_store, "kubecon", "kubecon-eu-2027")
+    assert eff["relevance_field"] == "value_to_community"
+    # an event override that adds an older benefits field changes the answer for that edition only
+    prof = profile.load_profile(seeded_store, "kubecon")
+    event = {"id": "x", "field_overrides": [{"id": "benefits", "label": "Benefits", "kind": "longtext", "audience": "reviewer"}]}
+    assert profile.effective(prof, event)["relevance_field"] == "benefits"
+    assert profile.effective(prof, None)["relevance_field"] == "value_to_community"
+
+
 def test_effective_without_event(seeded_store):
     prof = profile.load_profile(seeded_store, "kubecon")
     eff = profile.effective(prof, None)
@@ -97,6 +127,21 @@ def test_validate_reports_problems(seeded_store):
     assert "unknown rule kind" in text
     assert "rubric" in text
     assert "duplicate session type id" in text
+
+
+def test_bio_on_form_defaults_to_true_and_can_be_switched_off(seeded_store):
+    assert profile.load_effective(seeded_store, "kubecon")["bio_on_form"] is True
+    path = store.profile_path(seeded_store, "kubecon")
+    meta, body = frontmatter.load(path)
+    meta["bio_on_form"] = False
+    frontmatter.save(path, meta, body)
+    assert profile.load_effective(seeded_store, "kubecon", "kubecon-eu-2027")["bio_on_form"] is False
+    assert profile.validate(seeded_store, "kubecon") == []
+    meta["bio_on_form"] = "maybe"
+    frontmatter.save(path, meta, body)
+    assert any("bio_on_form" in problem for problem in profile.validate(seeded_store, "kubecon"))
+    # an unusable value never hides the bio by accident
+    assert profile.load_effective(seeded_store, "kubecon")["bio_on_form"] is True
 
 
 def test_validate_event_problems(seeded_store):

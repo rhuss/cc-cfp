@@ -43,6 +43,7 @@ rubric:
       description: ""
 rules: []
 rejection_reasons: []
+bio_on_form: true
 bio_limit:
 bio_limit_status: unverified
 ---

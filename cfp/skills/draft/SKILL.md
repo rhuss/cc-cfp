@@ -112,13 +112,13 @@ Iterate `fields` from `profile show` in order. Skip `title` and `abstract` when 
 Per field kind:
 
 - `choice` and `boolean`: ask with AskUserQuestion, never generate. Track options come from the event's `tracks` list; audience level from the field `options`; `format` defaults to the chosen session type's name. Save choice fields with `proposal set-field --text-file`; for `track` and `audience_level` this one call also updates the front matter that pre-flight reads (no second `set-meta` call needed). Track names come from fetched pages, so they always travel through the text file, never as a shell argument.
-- Reviewer-only relevance field (`audience: reviewer`, `kind: longtext`, such as `benefits`): draft per `$PLUGIN_ROOT/knowledge-base/guidance/benefits-field.md` (who benefits by persona, why now, what is new, credentials and evidence, data shown; never restate the abstract). Run its checklist before showing the text.
+- Reviewer-only relevance field: the one field whose id is `relevance_field` in the `profile show` output (`value_to_community` on the current KubeCon form, `benefits` on older ones; null when the form has none). Draft it per `$PLUGIN_ROOT/knowledge-base/guidance/benefits-field.md` (who benefits by persona, why now, what is new, credentials and evidence, data shown; never restate the abstract). Run its checklist before showing the text. Every other reviewer-only text field is drafted from its own `guidance`, like the other text fields below.
 - `previously_presented`: build from the talk outings. With a `presented` outing inside the conference family in the last twelve months, describe the significant differences (new data, scope, results) and mention a link to slides or video. Otherwise state plainly that the talk has not been presented before.
 - Project list fields (`cncf_oss_projects` on the current KubeCon form, or `cncf_projects` and `open_source_projects` on older profiles): build from the talk `projects`; print the proposed list in a fenced block exactly as it will be saved (one project per line with its link where known), then ask the user to confirm or correct names and links.
-- `resources` kind: run `resource list`, offer recordings first and recommend one (FR-027: the Speaker criterion reaches its top level only with a recording). Let the user pick up to the form's maximum, then save with `proposal set-meta --proposal <id> --resources id,id`. When no recording exists, say so and suggest `/cfp:bio resource add` later.
+- Resources field (the field with id `resources`, whether its kind is `resources` or free text such as `longtext`): run `resource list`, offer recordings first and recommend one (FR-027: the Speaker criterion reaches its top level only with a recording). Let the user pick, up to the form's maximum when the field guidance names one, then save with `proposal set-meta --proposal <id> --resources id,id`. That call stores the ids and writes one `Title: link` line per resource into the field. On a free-text field, print the resulting lines in a fenced block and ask whether to add what the field guidance asks for beyond the stored resources (for example recordings of co-speakers); when the user adds something, save the complete text with `proposal set-field --proposal <id> --field resources --text-file <file>`. When no recording exists, say so and suggest `/cfp:bio resource add` later.
 - Other `text` and `longtext` fields: draft per guidance, print the full text in a fenced block with its count, ask, save.
 
-Bio: run `bio list`. Show each variation with `chars` against `bio_limit` (`bio_limit_status` tells whether the limit is verified). Ask which one to use. Before attaching the chosen variation, run `bio show --name <name>` and print its complete text in a fenced block with `<chars>/<bio_limit> chars`, then ask to attach, shorten, or pick another. When the bio is drafted fresh inside this flow (no stored variation fits), the same rule applies: the complete bio text appears in a fenced block above the question that offers to save it. Then:
+Bio: when `bio_on_form` is false in the `profile show` output, the form has no speaker bio. Say so in one line, attach none, and skip the rest of this bio part. Otherwise run `bio list`. Show each variation with `chars` against `bio_limit` (`bio_limit_status` tells whether the limit is verified). Ask which one to use. Before attaching the chosen variation, run `bio show --name <name>` and print its complete text in a fenced block with `<chars>/<bio_limit> chars`, then ask to attach, shorten, or pick another. When the bio is drafted fresh inside this flow (no stored variation fits), the same rule applies: the complete bio text appears in a fenced block above the question that offers to save it. Then:
 
 ```bash
 python3 -I "$PLUGIN_ROOT/scripts/cfp_store.py" proposal set-meta --proposal <id> --bio "<name>"
@@ -152,7 +152,7 @@ When `round` reaches `review_rounds` without a pass: list the remaining weakness
 
 Only after a pass verdict (FR-021). Skip silently to Step 9 when the last verdict is not `pass`.
 
-For each of: `title`, `abstract`, the reviewer-only relevance field, and the bio snapshot (from `proposal show`), invoke the `prose:humanizer` skill through the Skill tool with the text and `voice_profile` from the config (omit the voice when empty). Then:
+For each of: `title`, `abstract`, the reviewer-only relevance field (the id in `relevance_field` from `profile show`, when it is not null), and the bio snapshot (from `proposal show`; only when `bio_on_form` is true), invoke the `prose:humanizer` skill through the Skill tool with the text and `voice_profile` from the config (omit the voice when empty). Then:
 
 - Skill tool reports the skill as unavailable: print "Voice pass skipped: prose plugin not installed" and go to Step 9. Texts stay as drafted.
 - Skill returns usage or help text instead of a rewrite: apply the humanizer core rules inline (no AI vocabulary, no rule-of-three padding, no inflated symbolism, varied sentence length, no em-dash or en-dash) and tell the user the rewrite was done inline.
@@ -177,22 +177,25 @@ From the `count` output, for every id in `over` (and the bio when its status is 
 python3 -I "$PLUGIN_ROOT/scripts/cfp_store.py" preflight --proposal <id> --today <today>
 ```
 
-`passed` is the rule verdict; the top-level `ok` only says the call succeeded.
+`passed` is the rule verdict; the top-level `ok` only says the call succeeded. `manual` lists the rules the CLI cannot compute, each with its `severity`, `params`, `text`, and `source`.
 
-Audience level (FR-029): compare the abstract against the stored `audience_level` yourself. Advanced terminology (internals, custom controllers, kernel paths, scheduler algorithms) under Beginner, or a definitions-first walkthrough under Advanced, is a mismatch. When they disagree, write `{"rule": "audience-level", "severity": "warn", "text": "<short reason>"}` to `<scratchpad>/cfp-finding.json` and run:
+Then make the two checks that need judgement. Read `$PLUGIN_ROOT/skills/_shared/preflight-checks.md` and follow it: the audience level comparison (FR-029) against the levels this profile's form offers, and every rule of kind `custom` in `manual`, judged against the proposal. Use the `count` result from Step 8 or 9, and run `count` again when a field changed since. Each finding is written to `<scratchpad>/cfp-finding.json` and recorded with:
 
 ```bash
 python3 -I "$PLUGIN_ROOT/scripts/cfp_store.py" preflight add-finding --proposal <id> --from-json <scratchpad>/cfp-finding.json
 ```
 
-Show every finding with its severity (`disqualify` or `warn`), text, and `source`, then the `manual` rules the committee covers (vendor pitch and custom rules), then any `problems` (proposal files that could not be read; the submission count may be low). Then handle:
+A violated custom rule takes its severity from the profile, so a `disqualify` rule blocks `ready` like a computed one. Every `preflight` run drops these findings; make both checks again after each re-run.
+
+Show every finding with its severity (`disqualify` or `warn`), text, and `source`, then one line per custom rule with its verdict, then the `vendor_pitch` rules the committee review covers, then any `problems` (proposal files that could not be read; the submission count may be low). Then handle:
 
 - Track finding: show the event's track list and let the user pick; save with `proposal set-field --field track --text-file <file>` (this also updates the front matter), then re-run `preflight`.
 - Repeat warning: ask whether the `previously_presented` text explains significant differences; offer to rewrite that field when it does not, then re-run.
 - Audience level warning: offer to change the level (`proposal set-field --field audience_level`) or the abstract, then re-run.
+- Violated custom rule: explain the rule. When a field causes it (a style rule, a required field that is still empty), offer to rewrite or draft that field, then re-run. Otherwise say what would resolve it outside this field set.
+- Other disqualifying findings (submission limit, speaker count, panel rules): explain the rule and what would resolve it; these need changes outside this field set.
 
 Any `set-field`, `set-bio-text`, or `set-meta` call on a proposal that is already `ready` moves it back to `draft` (the result carries `reset_to_draft: true`); say so and continue with the review and pre-flight again.
-- Other disqualifying findings (submission limit, speaker count, panel rules): explain the rule and what would resolve it; these need changes outside this field set.
 
 ## Step 11: Ready
 
@@ -215,8 +218,8 @@ Print the output in full (it is markdown, not JSON), then the proposal path from
 Resume detection reads `proposal show` and picks the first step whose data is missing:
 
 - No `title` or `abstract` field: Step 5 (after checking `talk complete`, which may send the flow back to Step 4).
-- A required field from `profile show` is missing, or `bio` is empty while the profile has a bio limit: Step 6 for the missing fields only.
-- `review_rounds` is empty, `review_stale` is true (the text was edited after the last review), or the last verdict is `revise` and the round count is below `review_rounds` from the config: Step 7.
+- A required field from `profile show` is missing, or `bio` is empty while `bio_on_form` is true: Step 6 for the missing parts only.
+- `review_rounds` is empty, `review_stale` is true (the proposal was `ready` and was then edited or moved back to `draft`, so the last review no longer covers its text; edits to a draft, such as the voice pass and shortening, do not set it), or the last verdict is `revise` and the round count is below `review_rounds` from the config: Step 7.
 - Last verdict `pass` and `voice_pass` false: Step 8.
 - `count` reports entries in `over`: Step 9.
 - `preflight` is empty or its `date` is older than the proposal's `updated`: Step 10.
