@@ -128,3 +128,12 @@ rules:
       - 'xref:profiles/refresh\.adoc'
     forbid:
       - '\b1300\b'
+  - glob: "content/modules/ROOT/pages/profiles/new.adoc"
+    require:
+      - '/cfp:profile new'
+      - '--screenshots'
+      - '(?i)login'
+      - 'custom'
+      - 'bio_on_form'
+      - '^Check:'
+      - '/cfp:profile show'
