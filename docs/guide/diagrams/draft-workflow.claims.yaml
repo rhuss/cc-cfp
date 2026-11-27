@@ -1,0 +1,196 @@
+diagram: draft-workflow
+claims:
+  - id: note
+    kind: label
+    elements: [note]
+    text: >-
+      /cfp:draft saves through the store CLI at every step; from Step 4b on every step saves to the
+      proposal id, and /cfp:draft --proposal <id> resumes at the first incomplete step.
+    sources:
+      - "cfp:cfp/skills/draft/SKILL.md:3,24-28,92,216-229"
+  - id: step-1
+    kind: label
+    elements: [s1]
+    text: >-
+      Step 1 picks the profile and the event; a missing edition is created inline by research
+      (cfp:profile refresh) or by manual entry.
+    sources:
+      - "cfp:cfp/skills/draft/SKILL.md:30-49"
+  - id: step-2
+    kind: label
+    elements: [s2]
+    text: Step 2 picks the session type from the effective profile.
+    sources:
+      - "cfp:cfp/skills/draft/SKILL.md:51-55"
+  - id: step-3
+    kind: label
+    elements: [s3]
+    text: "Step 3 picks the input: a one-line idea, existing material, an existing talk, or an existing proposal."
+    sources:
+      - "cfp:cfp/skills/draft/SKILL.md:57-64"
+  - id: step-4
+    kind: label
+    elements: [s4]
+    text: Step 4 is the story interview that completes the talk.
+    sources:
+      - "cfp:cfp/skills/draft/SKILL.md:66-84"
+  - id: step-4b
+    kind: label
+    elements: [s4b]
+    text: Step 4b creates the proposal with proposal create (no question to the user unless one already exists).
+    sources:
+      - "cfp:cfp/skills/draft/SKILL.md:86-92"
+  - id: step-5
+    kind: label
+    elements: [s5]
+    text: Step 5 presents two or three angles with a title and an abstract each and saves the chosen one.
+    sources:
+      - "cfp:cfp/skills/draft/SKILL.md:94-106"
+  - id: step-6
+    kind: label
+    elements: [s6]
+    text: Step 6 drafts the remaining form fields one by one, plus the bio when the form has one.
+    sources:
+      - "cfp:cfp/skills/draft/SKILL.md:108-133"
+  - id: step-7
+    kind: label
+    elements: [s7]
+    text: Step 7 is the committee review loop through the cfp:committee-review skill.
+    sources:
+      - "cfp:cfp/skills/draft/SKILL.md:135-149"
+  - id: step-8
+    kind: label
+    elements: [s8]
+    text: Step 8 is the voice pass through prose:humanizer on title, abstract, relevance field, and bio.
+    sources:
+      - "cfp:cfp/skills/draft/SKILL.md:151-168"
+  - id: step-9
+    kind: label
+    elements: [s9]
+    text: Step 9 offers to shorten every field that is over its limit.
+    sources:
+      - "cfp:cfp/skills/draft/SKILL.md:170-172"
+  - id: step-10
+    kind: label
+    elements: [s10]
+    text: Step 10 runs the pre-flight rule checks plus the two judgement checks.
+    sources:
+      - "cfp:cfp/skills/draft/SKILL.md:174-198"
+  - id: step-11
+    kind: label
+    elements: [s11]
+    text: Step 11 runs status ready-check and sets the proposal to ready when it can.
+    sources:
+      - "cfp:cfp/skills/draft/SKILL.md:200-206"
+  - id: step-12
+    kind: label
+    elements: [s12]
+    text: Step 12 prints the paste view in markdown; nothing is submitted.
+    sources:
+      - "cfp:cfp/skills/draft/SKILL.md:208-214"
+  - id: parked
+    kind: label
+    elements: [parked]
+    text: "Park: stop here; everything is saved as draft and /cfp:draft --proposal <id> resumes."
+    sources:
+      - "cfp:cfp/skills/draft/SKILL.md:149"
+  - id: flow-1-2
+    kind: connects
+    elements: [a_1_2]
+    text: Step 1 (profile and event) is followed by Step 2 (session type).
+    sources:
+      - "cfp:cfp/skills/draft/SKILL.md:30,49,51"
+  - id: flow-2-3
+    kind: connects
+    elements: [a_2_3]
+    text: Step 2 is followed by Step 3 (input source).
+    sources:
+      - "cfp:cfp/skills/draft/SKILL.md:51,57"
+  - id: flow-3-4
+    kind: connects
+    elements: [a_3_4]
+    text: Every input choice of Step 3 continues with Step 4 (story interview).
+    sources:
+      - "cfp:cfp/skills/draft/SKILL.md:61-63"
+  - id: flow-4-4b
+    kind: connects
+    elements: [a_4_4b]
+    text: Step 4 is followed by Step 4b (create the proposal).
+    sources:
+      - "cfp:cfp/skills/draft/SKILL.md:66,86"
+  - id: flow-4b-5
+    kind: connects
+    elements: [a_4b_5]
+    text: Step 4b is followed by Step 5 (angles).
+    sources:
+      - "cfp:cfp/skills/draft/SKILL.md:86,94"
+  - id: flow-5-6
+    kind: connects
+    elements: [a_5_6]
+    text: Step 5 is followed by Step 6 (field drafting), which skips title and abstract when saved.
+    sources:
+      - "cfp:cfp/skills/draft/SKILL.md:94,108-110"
+  - id: flow-6-7
+    kind: connects
+    elements: [a_6_7]
+    text: Step 6 is followed by Step 7 (committee review loop).
+    sources:
+      - "cfp:cfp/skills/draft/SKILL.md:108,135"
+  - id: flow-7-8
+    kind: connects
+    elements: [a_7_8]
+    text: A pass verdict continues with Step 8; the voice pass runs only after a pass verdict.
+    sources:
+      - "cfp:cfp/skills/draft/SKILL.md:140,153"
+  - id: flow-revise
+    kind: connects
+    elements: [a_revise]
+    text: >-
+      Verdict revise: the user picks suggestions, the fields are rewritten and saved, and the loop
+      runs another round while round is below review_rounds. At the round limit, "continue" runs
+      one more round, then asks again.
+    sources:
+      - "cfp:cfp/skills/draft/SKILL.md:142-143,145,147"
+  - id: flow-round-limit
+    kind: connects
+    elements: [a_limit]
+    text: >-
+      When round reaches review_rounds without a pass, "park" stops the flow; everything is saved
+      as draft.
+    sources:
+      - "cfp:cfp/skills/draft/SKILL.md:145,149"
+  - id: flow-no-pass
+    kind: connects
+    elements: [a_nopass]
+    text: >-
+      Without a pass verdict, including "accept as is" at the round limit (on to Step 8 without a
+      pass), the voice pass is skipped silently and the flow goes to Step 9.
+    sources:
+      - "cfp:cfp/skills/draft/SKILL.md:145,148,153"
+  - id: flow-8-9
+    kind: connects
+    elements: [a_8_9]
+    text: Step 8 is followed by Step 9 (over-limit shortening), from the count output of Step 8.
+    sources:
+      - "cfp:cfp/skills/draft/SKILL.md:157,164,172"
+  - id: flow-9-10
+    kind: connects
+    elements: [a_9_10]
+    text: Step 9 is followed by Step 10 (pre-flight).
+    sources:
+      - "cfp:cfp/skills/draft/SKILL.md:170,174,182"
+  - id: flow-10-11
+    kind: connects
+    elements: [a_10_11]
+    text: Step 10 is followed by Step 11 (ready check).
+    sources:
+      - "cfp:cfp/skills/draft/SKILL.md:174,200"
+  - id: flow-11-12
+    kind: connects
+    elements: [a_11_12]
+    text: Step 11 is followed by Step 12 (paste view).
+    sources:
+      - "cfp:cfp/skills/draft/SKILL.md:200,208"
+  - id: legend
+    kind: legend
+    elements: [lg_title, lg_gray, lg_gray_t, lg_blue, lg_blue_t, lg_orange, lg_orange_t]
