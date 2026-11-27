@@ -4,12 +4,12 @@
 // cfp:cfp/commands/check.md:2-3
 // cfp:cfp/commands/status.md:3
 // cfp:cfp/skills/check/SKILL.md:10-86
-// cfp:cfp/skills/draft/SKILL.md:170-172,174-198,200-206,208-214
+// cfp:cfp/skills/draft/SKILL.md:170-172,174-198,200-206,208-214,216-229
 // cfp:cfp/skills/_shared/preflight-checks.md:1-62
 // cfp:cfp/scripts/cfplib/preflight.py:11,71-95,98-127,130-138,141-154,157-175,178-193,196-203,213-240,243-275
 // cfp:cfp/scripts/cfplib/profile.py:18-19
 // cfp:cfp/scripts/cfplib/text.py:6-15,34-52
-// cfp:cfp/scripts/cfplib/proposals.py:260-264,280-292
+// cfp:cfp/scripts/cfplib/proposals.py:79-105,260-264,280-292
 // cfp:cfp/scripts/cfplib/counts.py:13-35
 // cfp:cfp/scripts/cfplib/lifecycle.py:10-13,29,39-55,161-162
 // cfp:cfp/scripts/cfplib/pasteview.py:8-25,28-82,85-115
@@ -37,13 +37,13 @@ The severity is one of two values:
 
 `cfp` computes six kinds of rules from what your store holds:
 
-Submission limit:: How many of your proposals for the same event already have the status `submitted`, `accepted`, `rejected`, or `presented`.
+Submission limit:: How many of your other proposals for the same event already have the status `submitted`, `accepted`, `rejected`, or `presented`.
 When that number reaches the limit, adding this one would exceed it.
 An event's own `submission_limit` wins over the number in the profile rule.
 If some proposal files can't be read and the limit isn't reached, cfp counts the rest and gives you a `warn` finding that names the skipped files.
 
 Repeat within months:: Whether the talk was presented at the same conference within the last 12 months (or the number of months the rule sets).
-When the proposal's previously-presented field explains the differences, the finding drops to `warn`.
+When the proposal's `previously_presented` field has any text, the finding drops to `warn`; cfp doesn't judge the text, and the finding asks you to make sure the differences are significant.
 
 Track:: Whether the proposal's track is on the event's track list.
 An event without a track list skips this rule.
@@ -94,7 +94,7 @@ The finding takes its severity and source from the profile, so a violated `disqu
 
 `does not apply`:: The rule is about a session type or a situation your proposal isn't in.
 
-`confirm yourself`:: The rule depends on something your store doesn't hold, such as whether a co-speaker agreed to travel.
+`confirm yourself`:: The rule depends on something your store doesn't hold, such as whether a co-speaker agreed to travel (`cannot tell` in the skill's instructions).
 
 What happens on `confirm yourself` depends on the severity.
 For a `warn` rule, cfp adds no finding and lists the rule for you to confirm.
@@ -179,7 +179,7 @@ A few things are worth knowing about the findings:
 * Every pre-flight run replaces the stored findings, including the ones from the audience level check and the custom rules.
 Both judged checks run again each time and add back what still applies.
 * Changing a field of a `ready` proposal moves it back to `draft`; cfp tells you when that happens.
-* A repeat finding drops from `disqualify` to `warn` when the previously-presented field explains the significant differences; you edit that field through `/cfp:draft --proposal <id>`.
+* A repeat finding drops from `disqualify` to `warn` as soon as the previously-presented field has text, so use that field to explain the significant differences; you edit it through `/cfp:draft --proposal <id>`.
 * A violated custom rule is fixed in the draft flow, or outside cfp when it's about speakers or the session type.
 
 === The same check inside /cfp:draft
@@ -208,7 +208,7 @@ A proposal becomes `ready` automatically only when the ready check finds no reas
 The possible reasons are:
 
 * no committee review has been recorded yet, or the last verdict isn't `pass`;
-* the proposal was edited after its last passing review (see xref:user/draft.adoc#edit-ready[Edit a ready proposal]);
+* the proposal went back to `draft` after its last passing review (see xref:user/draft.adoc#edit-ready[Edit a ready proposal]);
 * the pre-flight hasn't run yet;
 * the pre-flight reported disqualifying findings.
 
@@ -249,7 +249,8 @@ The reviewer-only "Value to the community" field has 295 characters and no limit
 After the last field, the paste view ends with a speaker bio section: its heading names the bio variation when one is set, followed by the count label, the flags, and the text.
 When the form has no speaker bio, that section is left out entirely, because there's nothing to paste.
 
-To see the paste view again later, run `/cfp:draft --proposal <id>` on a finished proposal, or print it from your cc-cfp clone.
+To see the paste view again later, print it directly with the store CLI's `pasteview` command from your cc-cfp clone.
+`/cfp:draft --proposal <id>` reaches the paste view only when no earlier step has missing data; otherwise it resumes at that step.
 
 Check: the paste view of Ada's proposal starts with its heading.
 

@@ -28,7 +28,7 @@ You have a talk idea, and a conference wants a proposal for it.
 The catch is the form, which often sits behind a login, so you can't see it until you sign in.
 It has fixed fields, character limits, a field that only the reviewers read, and rules that take a proposal out of review when you break one.
 At KubeCon + CloudNativeCon, the reviewers of a track handle 100 to 200 proposals each, and acceptance has fallen to around 8 to 11 percent.
-A generic abstract loses to a specific one, and the abstract gets 1000 characters.
+A generic abstract on a hot topic loses to a specific one, and the abstract gets 1000 characters.
 Then you want to give the same talk somewhere else, and the next conference has a different form.
 
 `cfp` turns all of this into a guided conversation.

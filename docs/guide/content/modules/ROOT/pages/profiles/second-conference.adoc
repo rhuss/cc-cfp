@@ -313,5 +313,5 @@ Assumption: pass_average 3.0 and pass_min_criterion 2.0 on the 4-point scale.
 The program team prefers a live demo over slides only.
 ----
 
-`cfp` reads this section from the profile file of the conference you draft for.
+`cfp` loads this section from the profile file.
 `/cfp:profile show` prints it in full, and the committee review packet carries it too.

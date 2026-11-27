@@ -34,7 +34,7 @@ A *talk* is the conference-independent story of your session: the problem, your 
 
 A *proposal* is that talk rendered for one conference edition, field by field, together with its committee review rounds and the results of its pre-flight, the check against the conference's rules.
 There's one proposal per talk and edition, and its file name joins the two.
-Ada Example's talk `build-cache` at the KubeCon EU 2027 edition becomes the proposal `kubecon-eu-2027--build-cache`.
+Ada Example's talk `safe-node-drains` at the KubeCon EU 2027 edition becomes the proposal `kubecon-eu-2027--safe-node-drains`.
 
 A *profile* describes one conference: its session types, the form fields with their limits, the reviewers' scoring rubric, the rules, and the reasons for rejection.
 An *event* is one edition of that conference.
@@ -60,7 +60,7 @@ image::store-model.svg["Your store: config.md, talks, proposals, bios, and resou
 Blue marks what's yours, and orange marks the conference side.
 The file `~/.config/cc-cfp/config.json` sits outside the store and tells cfp where the store is.
 Two arrows in the diagram come from a proposal's status.
-Setting a proposal to `accepted` adds its title, abstract, and benefits to its profile as a calibration example.
+Setting a proposal to `accepted` adds its title, abstract, and the text of its relevance field to its profile as a calibration example.
 Setting it to `presented` records an outing on its talk.
 
 == Your path through this section

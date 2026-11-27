@@ -695,3 +695,4 @@ The review packet carries the title, abstract, benefits, event, year, and origin
 |===
 
 `profile validate` does not check `name`, `platform`, `sources`, `params`, or any key the tables mark "no".
+It also does not check the values inside a session type override or a field override, only their `id` (and `remove` for a session type override).

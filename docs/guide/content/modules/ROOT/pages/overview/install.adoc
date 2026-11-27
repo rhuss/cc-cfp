@@ -197,5 +197,6 @@ Run `make install` again in your clone.
 
 == Next steps
 
+* xref:user/index.adoc[Using cfp] explains the ideas behind every page and your path through the user guide.
 * xref:user/draft.adoc[Draft a proposal] takes you from a talk idea to a filled-in conference form.
 * After a plugin update, xref:profiles/refresh.adoc[Refresh a profile and update shipped ones] explains how the shipped profile in your store gets updated.

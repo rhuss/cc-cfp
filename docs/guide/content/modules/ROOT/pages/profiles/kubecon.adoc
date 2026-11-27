@@ -250,7 +250,7 @@ xref:profiles/refresh.adoc[Refresh a profile and update shipped ones] walks you 
 
 The live Sessionize form sits behind a login, so the limits are confirmed with screenshots.
 The title limit is still `unverified`.
-Screenshots of the form fix both.
+Screenshots of the form confirm the title limit and keep the other limits current.
 
 . Open the edition's Sessionize form in your browser and take a screenshot of each page.
 . In Claude Code, run the refresh with the screenshots as a comma-separated list:

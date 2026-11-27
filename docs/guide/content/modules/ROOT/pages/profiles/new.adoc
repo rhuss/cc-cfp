@@ -7,7 +7,8 @@
 // cfp:cfp/knowledge-base/guidance/profile-research.md:5,26,39,46,59-64,70-76,82-95,97,99
 // cfp:cfp/skills/_shared/preflight-checks.md:43
 // cfp:cfp/skills/draft/SKILL.md:110
-// cfp:cfp/scripts/cfplib/profile.py:26,273-355,393-394,404-406,432-434
+// cfp:cfp/scripts/cfplib/profile.py:26,273-355,391-443
+// cfp:cfp/scripts/cfplib/review.py:73
 // cfp:cfp/scripts/cfp_store.py:328-330
 // cfp:cfp/scripts/cfplib/store.py:67-76
 
@@ -112,7 +113,7 @@ On re-research, it goes back to the sources for that section only, fetching agai
 +
 The profile also gets a drafting guidance section.
 `cfp` fills it with what reviewers reward and punish, any historic limits with the URL they came from, and its pass assumption when the conference published no pass threshold.
-`/cfp:draft` reads that text later.
+`/cfp:profile show` prints that text, and the committee review packet carries it to the reviewer.
 
 . Let cfp write the profile.
 Once you've approved every section, cfp writes the profile, then the event, into your store as `profiles/<id>/profile.md` and `profiles/<id>/events/<event-id>.md`.
@@ -124,13 +125,7 @@ It reports, among other things, a field or rule without an id, an id used twice,
 For the event it also reports an empty track list (the track checks can't run without one) and a date that isn't an ISO date.
 When something's wrong, cfp shows you the problems before it fixes them.
 
-[NOTE]
-====
-The two files take their approval differently when cfp writes them again.
-A profile that already exists keeps its `approved` flag when the data cfp writes has no such key, and the profile data cfp drafts has none.
-An event always takes the flag from the data cfp writes, which is off unless set.
-In the `new` flow cfp sets it for the event only because you approved every section.
-====
+When cfp writes these files again later, the profile keeps its approval and a rewritten event takes its approval from the data cfp writes, as xref:profiles/refresh.adoc[Refresh a profile and update shipped ones] shows.
 
 == When nothing is public
 
@@ -228,3 +223,5 @@ The fields table lists each field's `limit_status`, and below it cfp names the r
 Near the end, the bio line says "no bio on the form" when `bio_on_form` is false, and otherwise shows the bio limit with its label.
 
 If the conference isn't shaped like KubeCon + CloudNativeCon, xref:profiles/second-conference.adoc[A second conference: what changes] covers what changes.
+
+To draft your first proposal against the new profile, continue with xref:user/draft.adoc[Draft a proposal].

@@ -322,4 +322,5 @@ Behind the scenes, the edit clears the stored pre-flight results and marks the l
 That stale review is what sends a resumed draft back to Step 7.
 Edits to a proposal that's still a draft, such as the voice pass or shortening, don't mark the review as stale.
 
-Resuming a `ready` proposal with `/cfp:draft --proposal <id>` goes to Step 12, the paste view, and `/cfp:draft` without arguments lists only drafts.
+Resuming a `ready` proposal follows the same order; with no field over its limit and a current pre-flight, it goes to Step 12, the paste view.
+`/cfp:draft` without arguments lists only drafts.

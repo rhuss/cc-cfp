@@ -169,7 +169,7 @@ For each entry in `co_speakers`, the company is the text after the last comma, t
 The skill that ran `preflight` judges the manual rules, following `cfp/skills/_shared/preflight-checks.md`.
 Both `/cfp:check` and `/cfp:draft` read that file, so they reach the same verdicts.
 
-A `custom` rule gets one of four verdicts: `violated`, `met`, `does not apply`, or `cannot tell`.
+A `custom` rule gets one of four verdicts: `violated`, `met`, `does not apply`, or `cannot tell` (the report shows it as `confirm yourself`).
 Only `violated` adds a finding by itself.
 `cannot tell` on a `disqualify` rule leads to a question; your answer `no` adds the finding as for `violated`, and `not sure` adds it with the severity `warn`.
 `cannot tell` on a `warn` rule adds nothing.
@@ -210,7 +210,7 @@ Setting the status to `draft` by hand does the same.
 `lifecycle.ready_check` collects reasons against `ready`:
 
 . The verdict of the last review round isn't `pass`, or there's no round yet.
-. The last verdict is `pass`, but `review_stale` is set because the proposal was edited after that review.
+. The last verdict is `pass`, but `review_stale` is set because the proposal went back to `draft` after that review.
 . The stored `preflight` map is empty, because the pre-flight hasn't run or an edit cleared it.
 . The stored `preflight` has `ok` set to false.
 
