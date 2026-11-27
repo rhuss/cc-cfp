@@ -1,0 +1,5 @@
+= Bios and speaker resources
+:guide-no-sources:
+
+// STUB
+This page is written by a later task of the guide plan.

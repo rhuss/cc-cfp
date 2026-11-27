@@ -1,1 +1,7 @@
-rules: []
+rules:
+  - glob: "content/modules/ROOT/pages/**/*.adoc"
+    forbid:
+      - '(?i)red hat summit|rh-summit|rainfocus'
+      - '(?i)openshell'
+      - '^// cfp:(specs|brainstorm)/'
+      - '(?i)\bcfp (submits|will submit|can submit)\b'
