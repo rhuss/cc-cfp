@@ -1,5 +1,274 @@
 = Configuration and proposal lifecycle
-:guide-no-sources:
 
-// STUB
-This page is written by a later task of the guide plan.
+// Sources:
+// cfp:cfp/scripts/cfplib/config.py:1-6,15-23,26-55,72-114,162-168
+// cfp:README.md:25,29,61
+// cfp:cfp/scripts/cfp_store.py:93-105,287-309
+// cfp:cfp/scripts/cfplib/preflight.py:157-175,178-181
+// cfp:cfp/skills/draft/SKILL.md:22,36,143-145,155
+// cfp:cfp/skills/bio/SKILL.md:43-45
+// cfp:cfp/skills/committee-review/SKILL.md:81
+// cfp:cfp/scripts/cfplib/proposals.py:7,12-36,79-105,275,300,375
+// cfp:cfp/scripts/cfplib/lifecycle.py:10-29,32-36,39-55,58-74,90-137,140-179
+// cfp:cfp/skills/status/SKILL.md:39-47,54-61
+
+This page lists cfp's two configuration files, the keys of the store's `config.md`, and the rules of the proposal lifecycle.
+xref:overview/install.adoc[Install and first run] walks through the setup, and xref:user/status.adoc[Track a proposal's status] shows the lifecycle from the user's side.
+
+== The user config file
+
+[cols="1,3"]
+|===
+|Item |Value
+
+|Path
+|`~/.config/cc-cfp/config.json`
+
+|Content
+|A JSON object with the key `store`, the absolute path of the store.
+
+|Written by
+|`/cfp:init` and `config init`, on every setup run.
+The write keeps any other keys in the file and replaces `store`.
+
+|Missing or malformed file
+|Read as an empty object, so the store must come from `--store` or `CFP_STORE`.
+|===
+
+== Store resolution
+
+The store CLI takes the first of these that is set:
+
+[cols="1,2,3"]
+|===
+|Order |Source |Note
+
+|1
+|`--store <path>`
+|Given on a store CLI call.
+
+|2
+|`CFP_STORE`
+|An environment variable.
+It points a session at a second store without rewriting `config.json`, and the context hook honours it too.
+
+|3
+|`store` in `~/.config/cc-cfp/config.json`
+|Written by `/cfp:init`.
+|===
+
+With none of the three, the call fails with `no store configured`.
+xref:overview/install.adoc[Install and first run] has a walkthrough for a second store with `CFP_STORE`.
+
+== The keys of config.md
+
+`<store>/config.md` holds the speaker settings in its front matter.
+xref:internals/store.adoc[Store files] shows an example file.
+
+[cols="1,1,3"]
+|===
+|Key |Default |Use
+
+|`speaker_name`
+|empty
+|Read by `/cfp:draft` and `/cfp:bio`.
+`config init` requires it as `--speaker-name`.
+
+|`speaker_company`
+|empty
+|Read by `/cfp:draft` and `/cfp:bio`.
+The multi-company panel rule of the pre-flight check takes it as the speaker's company.
+
+|`voice_profile`
+|empty
+|The cc-prose voice profile that `/cfp:draft` hands to the voice pass.
+When it is empty, the voice pass runs without one.
+
+|`review_rounds`
+|`3`
+|The maximum number of committee review rounds in the `/cfp:draft` review loop.
+When the rounds run out without a pass, `/cfp:draft` asks you how to go on.
+It is read as an integer; a value that does not parse as one falls back to 3.
+
+|`default_profile`
+|empty
+|The profile `/cfp:draft` offers first.
+`/cfp:bio` reads its bio limit to suggest a bio length.
+When it is empty during setup, `/cfp:init` sets it to the first profile folder in alphabetical order.
+
+|`speaker_gender`
+|not set
+|Optional; `/cfp:init` never asks for it, so you add it by hand.
+The rule for line-ups in which every speaker is a man puts it first in the list of speaker genders, followed by the proposal's `co_speaker_genders`.
+Without it, a line-up that the rule covers gets a `warn` finding about unknown genders, unless a co-speaker's gender is known and is not a man.
+xref:internals/rules.adoc#line-ups-in-which-every-speaker-is-a-man[How rules and verdicts are computed] explains the rule.
+|===
+
+`config show` returns the keys of `config.md` merged over these defaults.
+A key without a value in the file takes its default.
+
+== Change a key with config set
+
+`config set` writes one key of `config.md` in an initialized store:
+
+[source,bash]
+----
+python3 -I cfp/scripts/cfp_store.py config set --key review_rounds --value 4
+----
+
+`--key` and `--value` are both required.
+`review_rounds` must be an integer, otherwise the call fails.
+`set` writes whatever key you name, so it also adds `speaker_gender`.
+xref:reference/cli.adoc#config[Store CLI] lists `config show`, `config init`, and `config set` in full.
+
+== The proposal lifecycle
+
+image::proposal-lifecycle.svg["Proposal lifecycle: the seven statuses with their allowed transitions, the check before ready, the effects of accepted and presented, and the four statuses that count toward a submission limit",role=expand]
+
+A new proposal starts as `draft`.
+A proposal without a `status` in its front matter is treated as `draft`.
+`/cfp:status` and `status set` move a proposal from one status to the next.
+
+[NOTE]
+====
+cfp never submits anything.
+`submitted` records that you pasted the texts into the conference site yourself.
+====
+
+=== Statuses and transitions
+
+[cols="1,2,1,1"]
+|===
+|Status |Allowed next statuses |Date field set |Counts toward the limit
+
+|`draft`
+|`ready`, `submitted`, `withdrawn`
+|none
+|no
+
+|`ready`
+|`draft`, `submitted`, `withdrawn`
+|`ready_on`
+|no
+
+|`submitted`
+|`accepted`, `rejected`, `withdrawn`
+|`submitted_on`
+|yes
+
+|`accepted`
+|`presented`, `withdrawn`
+|`decided_on`
+|yes
+
+|`presented`
+|none (final)
+|`presented_on`
+|yes
+
+|`rejected`
+|none (final)
+|`decided_on`
+|yes
+
+|`withdrawn`
+|none (final)
+|`decided_on`
+|no
+|===
+
+* A move outside this table fails with a message that names the allowed targets.
+An unknown status fails with the list of valid statuses.
+* The date comes from `--date` in ISO form (`YYYY-MM-DD`) and defaults to today.
+A move to `draft` writes no date.
+* Every move sets `updated` to today.
+* The proposal must have a `profile` in its front matter, otherwise the move fails.
+
+=== The check before ready
+
+A move to `ready` passes only when all of these hold:
+
+* the last committee review verdict is `pass`;
+* `review_stale` is not set, that is, the proposal was not edited after that review;
+* a pre-flight result exists and it reported no disqualifying findings.
+
+With `--force`, `ready` is set without these checks, and the result says so in its side effects.
+xref:internals/rules.adoc#the-ready-check[How rules and verdicts are computed] describes the check.
+
+=== Side effects
+
+[cols="1,3"]
+|===
+|Trigger |Effect
+
+|Move to `accepted`
+|Adds a calibration example with the origin `own-accepted` to the proposal's profile.
+It holds the proposal's title, abstract, and the text of the profile's reviewer-only relevance field.
+
+|Move to `presented`
+|Records an outing of kind `presented` on the proposal's talk, with the event, the profile as family, and the date.
+
+|Move to `draft`
+|Clears `ready_on` and the pre-flight result.
+When the proposal has review rounds, it sets `review_stale`.
+
+|Content edit of a `ready` proposal
+|A field text, bio, or settings change moves the proposal back to `draft` with the same effects as a move to `draft`.
+A content edit of a `draft` proposal does not change its status.
+|===
+
+`/cfp:status reopen` starts a new draft from a proposal's talk for another event, and the source proposal keeps its status.
+The diagram shows this note at `rejected`; the command is meant for rejected or withdrawn proposals and asks before it reopens a proposal with another status.
+
+=== Statuses that count toward a submission limit
+
+`submitted`, `accepted`, `rejected`, and `presented` proposals count toward the submission limit of their event.
+`draft`, `ready`, and `withdrawn` proposals do not.
+A proposal id counts once, and a proposal file with broken front matter is not counted.
+xref:internals/rules.adoc#submission-limit[How rules and verdicts are computed] shows how the pre-flight check applies the limit.
+
+=== Proposal front matter keys of the lifecycle
+
+[cols="1,1,3"]
+|===
+|Key |Default |Content
+
+|`status`
+|`draft`
+|The current status.
+
+|`ready_on`
+|empty
+|The date of the move to `ready`; cleared by a move or demotion to `draft`.
+
+|`submitted_on`
+|empty
+|The date of the move to `submitted`.
+
+|`decided_on`
+|empty
+|The date of the move to `accepted`, `rejected`, or `withdrawn`.
+
+|`presented_on`
+|empty
+|The date of the move to `presented`.
+
+|`updated`
+|empty
+|Set to today by every status move.
+
+|`review_rounds`
+|`[]`
+|The recorded committee review rounds; the ready check reads the verdict of the last one.
+This list is not the `review_rounds` key of `config.md`.
+
+|`review_stale`
+|`false`
+|Set when a proposal with review rounds goes back to `draft`.
+
+|`preflight`
+|`{}`
+|The stored pre-flight result; the ready check needs it with no disqualifying findings.
+|===
+
+xref:internals/store.adoc[Store files] shows a complete proposal file.

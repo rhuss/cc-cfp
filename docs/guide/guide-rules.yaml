@@ -228,3 +228,13 @@ rules:
       - 'field_overrides'
       - 'limit_status'
       - 'seed_version'
+  - glob: "content/modules/ROOT/pages/reference/config.adoc"
+    require:
+      - 'speaker_gender'
+      - 'default_profile'
+      - 'review_rounds'
+      - 'CFP_STORE'
+      - 'config\.json'
+      - 'image::proposal-lifecycle\.svg\['
+      - 'decided_on'
+      - 'submitted_on'
