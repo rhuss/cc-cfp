@@ -166,3 +166,11 @@ rules:
       - 'make test'
       - '^// url:https://code\.claude\.com/docs/en/hooks'
       - 'xref:reference/cli\.adoc'
+  - glob: "content/modules/ROOT/pages/internals/store.adoc"
+    require:
+      - 'image::store-model\.svg\['
+      - 'config\.md'
+      - 'Field: '
+      - '(?i)front matter'
+      - 'proposals/'
+      - 'xref:reference/schema\.adoc'
