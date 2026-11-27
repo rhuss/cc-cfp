@@ -1,5 +1,172 @@
 = How profiles work
-:guide-no-sources:
 
-// STUB
-This page is written by a later task of the guide plan.
+// Sources:
+// cfp:README.md:3,45,50-52
+// cfp:cfp/knowledge-base/guidance/profile-research.md:5,9-12,39,46,50-54,97,99
+// cfp:cfp/knowledge-base/profiles/kubecon/profile.md:5,239
+// cfp:cfp/knowledge-base/profiles/kubecon/events/kubecon-eu-2027.md:2-3,9
+// cfp:cfp/knowledge-base/profiles/kubecon/events/kubecon-na-2026.md:2-3
+// cfp:cfp/knowledge-base/profiles/kubecon/examples/lf-sample-container-runtime.md:2-3
+// cfp:cfp/scripts/cfplib/store.py:67-80
+// cfp:cfp/scripts/cfplib/profile.py:8-19,22-57,60-82,184-201,204-261,361-388,505-510
+// cfp:cfp/scripts/cfplib/proposals.py:144-149
+// cfp:cfp/scripts/cfplib/review.py:16,55-57,74
+// cfp:cfp/scripts/cfplib/pasteview.py:8-25,60-64
+// cfp:cfp/scripts/cfplib/config.py:117-129,152-160
+// cfp:cfp/scripts/cfp_store.py:320-325
+// cfp:cfp/skills/profile/SKILL.md:3,18-21,29-40,59,61,65,75-82,103,121-140
+// cfp:cfp/skills/draft/SKILL.md:49,115
+// cfp:cfp/skills/committee-review/SKILL.md:12
+// cfp:cfp/skills/init/SKILL.md:51,54,58-60
+// url:https://code.claude.com/docs/en/overview
+
+`cfp` is a plugin for Claude Code, an AI-powered coding assistant, and it drafts conference talk proposals and speaker bios with you, using reusable conference profiles.
+A *conference profile* is the structured data cfp keeps about one conference: its session types, the form fields with their character limits, the reviewers' scoring rubric, the rules, and the reasons for rejection.
+`/cfp:draft` reads it to know which fields to draft, how long each may be, which options exist, and which rules disqualify a proposal.
+In this section you learn how a conference's form and rules become that data, how cfp marks how sure it is of every limit, and how you keep a profile current from one edition of the conference to the next.
+That matters because the form itself usually sits behind a login, and the profile is where cfp keeps its fields, limits, and rules for you.
+For KubeCon + CloudNativeCon, cfp ships a ready profile built from the conference's public CFP pages, its reviewer rubric, and its hard rules.
+For any other conference, you research a profile yourself with `/cfp:profile`.
+
+xref:user/index.adoc[Using cfp] introduces profiles together with talks, proposals, and your store.
+This page goes one level deeper.
+
+== Profile, event, and examples
+
+A profile covers a conference family, such as KubeCon + CloudNativeCon, and keeps what holds for every edition.
+That's the session types, the form fields with their limits, the rubric, the rules, the rejection reasons, and whether the form asks for a speaker bio.
+
+An *event* is one edition of that conference.
+It holds the edition's overrides: name, location, dates, CFP open and close with the timezone, notification date, tracks, submission limit, and changes to session types and fields.
+Dates, tracks, location, and per-edition session type variations always go into the event, never into the profile.
+An event's id is the profile id followed by the edition, such as `kubecon-eu-2027`.
+
+*Examples* are calibration texts, accepted texts and official samples, and the committee review puts some of them, three by default, into what the reviewer reads.
+xref:user/review.adoc#calibration[Accepted proposals as calibration examples] explains how they get there.
+
+Each profile has its own folder under `profiles` in your store, with one markdown file per profile, event, and example.
+`/cfp:init` copies the shipped KubeCon profile into a new store, so after setup you have these files:
+
+[source,text]
+----
+profiles/kubecon/profile.md
+profiles/kubecon/events/kubecon-eu-2027.md
+profiles/kubecon/events/kubecon-na-2026.md
+profiles/kubecon/examples/lf-sample-container-runtime.md
+----
+
+To get the form of one edition, cfp merges the event onto its profile:
+
+* A session type or field in the event updates the profile's entry with the same id, changing only the keys the event sets, or is added when the profile has no such entry.
+An event can also remove a session type.
+* The event's tracks become the options of the `track` field.
+* The event's submission limit replaces the profile's, when the event sets one.
+* The rubric, the rules, the rejection reasons, and the bio settings always come from the profile.
+
+`/cfp:profile show` with an event displays this merged form, and proposals are drafted against it.
+
+== What a profile holds
+
+Every form field in a profile has an id, a label, a required flag, and a kind: `text`, `longtext`, `choice`, `multichoice`, `boolean`, `link`, or `resources`.
+It also has a limit with its `limit_status` and `source`, options for the choice kinds, an audience (`public` or `reviewer`), and drafting guidance.
+The rubric has a scale, a minimum average to pass, a minimum score per criterion, and the criteria.
+Each rule has a kind, a severity (`disqualify` or `warn`), parameters, a source, and its text.
+The kinds cover submission limits, repeat talks, tracks, speaker counts, panel make-up, vendor pitches, and `custom` rules for everything else.
+xref:reference/schema.adoc[Profile and event schema] lists every key.
+
+== Approving a profile and an event
+
+A profile and an event each carry an `approved` flag, and a file without it counts as unapproved.
+`/cfp:profile` shows you its research one section at a time and asks whether to approve, edit, or re-research it.
+It writes a section's data only after you approved that section, and it sets the flag once every section is approved.
+When you refresh a profile for a new edition, the new event is written unapproved and approved only after you went through all its sections.
+
+`cfp` treats a profile with an event as approved only when both are.
+`/cfp:draft` refuses to continue with an unapproved profile or event and points you to `/cfp:profile show` and `/cfp:profile refresh`.
+The script that creates a proposal refuses as well and names what isn't approved.
+xref:user/draft.adoc[Draft a proposal] shows where that happens in the conversation.
+
+The shipped KubeCon profile needs no approval from you: `/cfp:init` marks the profiles it copies into your store as approved, so drafting works right away.
+
+== Where each limit comes from
+
+Every limit and every rule in a profile carries one of three verification labels, and `/cfp:profile` shows the label next to each item it presents to you:
+
+`page`:: Taken from a fetched public page, whose URL goes into the source.
+`screenshot`:: Taken from a screenshot of the form, with `screenshot:<file>` as the source.
+`unverified`:: Remembered, guessed, or copied from an older template, with an empty source.
+
+A label is never upgraded without a source, so a number you remember stays `unverified`.
+When a screenshot contradicts a page, the screenshot wins, and the profile's Notes section records both values and both sources.
+The shipped KubeCon profile marks the limits that a screenshot of the live form confirmed as `screenshot`, and the rest stay `unverified`.
+
+The label shows up again at the end of drafting, in the paste view, the final output with every field and its character count.
+A field whose limit is `page` or `screenshot` shows its count as `<chars>/<limit> chars`.
+A field whose limit is `unverified` adds "(limit approximate, unverified)" and the flag `limit unverified`.
+When any limit is `unverified`, the paste view also warns that the live form may differ and suggests confirming the limits with screenshots through `/cfp:profile refresh`.
+xref:user/preflight.adoc[Pre-flight, counts, and the paste view] shows the paste view in full.
+
+== The relevance field
+
+A form can have a text field that only the reviewers read, in which you argue why the talk belongs on the schedule.
+`cfp` calls it the relevance field and picks exactly one per form:
+
+. the field with the id `benefits`, when the form has one;
+. otherwise the first field in form order that is reviewer-only (`audience: reviewer`) and long text (`kind: longtext`), leaving out `previously_presented` and `resources`, which have drafting rules of their own.
+
+When no field qualifies, the form has no relevance field.
+`/cfp:profile show` names the chosen field as `relevance_field`, or says that the form has none.
+On the current KubeCon form it's `value_to_community`.
+Drafting, the committee review, and the capture of accepted examples all use this one answer.
+Every other reviewer-only text field is drafted from its own guidance, so a profile you research should give each of those fields a guidance text that says what the form expects.
+xref:user/draft.adoc[Draft a proposal] explains how cfp writes the relevance field.
+
+== Whether the form asks for a bio
+
+The speaker bio isn't one of the form fields.
+A profile records it with three keys of its own: `bio_on_form`, `bio_limit`, and `bio_limit_status`.
+`bio_on_form` is true by default, and only an explicit `false` switches the bio off.
+Set it to `false` only when screenshots cover the complete form and show no bio.
+Then `/cfp:draft` attaches no bio, and the paste view prints none.
+Without screenshots of the whole form, keep it `true`.
+xref:user/preflight.adoc[Pre-flight, counts, and the paste view] shows how a bio is counted when the form has none.
+
+== Look at your profiles
+
+Before you draft, it helps to know which profiles and editions your store has, whether they're approved, and how much time is left until each CFP closes.
+Two `/cfp:profile` subcommands show you that without changing anything.
+
+. In Claude Code, type:
++
+[source,text]
+----
+/cfp:profile list
+----
++
+`/cfp:profile` without anything after it does the same, because `list` is the default.
++
+Check: cfp shows one table per profile.
+The profile row has the id, the name, and whether it's approved.
+Each event row has the id, the name, the CFP close date, the days to close ("closed" when the date has passed, "unknown" when the event has none), and whether it's approved.
+
+. Look at one edition in full:
++
+[source,text]
+----
+/cfp:profile show kubecon --event kubecon-eu-2027
+----
++
+Check: the header shows the profile's name, platform, and approval, then the event's name, location, dates, CFP open and close, notification date, days to close, and approval.
+For `kubecon-eu-2027` the days to close say "closed", because its CFP closed on 2026-10-11.
+Below come the session types and the fields as tables, with each field's `limit_status` and audience, then the rubric with its criteria, the rules, and the event's tracks.
+Under the fields table cfp names the relevance field.
+The end shows the rejection reasons, the bio line ("no bio on the form" when `bio_on_form` is false, otherwise the bio limit with its label), and the drafting guidance.
++
+Leave out `--event`, and the tracks part says "no event chosen".
+
+== Pages in this section
+
+. xref:profiles/kubecon.adoc[The shipped KubeCon profile]: what the KubeCon + CloudNativeCon profile contains and which of its limits a screenshot confirmed.
+. xref:profiles/new.adoc[Research a new conference]: build a profile for another conference with `/cfp:profile new`, from its public CFP pages and screenshots of its form.
+. xref:profiles/refresh.adoc[Refresh a profile and update shipped ones]: add a new edition with `/cfp:profile refresh`, and take in a newer shipped profile after a plugin update with `/cfp:init`.
+. xref:profiles/second-conference.adoc[A second conference: what changes]: what's different when your next conference isn't KubeCon + CloudNativeCon, and what cfp does about each difference.

@@ -104,3 +104,15 @@ rules:
       - 'presented'
       - 'rejected'
       - 'withdrawn'
+  - glob: "content/modules/ROOT/pages/profiles/index.adoc"
+    require:
+      - 'xref:profiles/kubecon\.adoc'
+      - 'xref:profiles/new\.adoc'
+      - 'xref:profiles/refresh\.adoc'
+      - 'xref:profiles/second-conference\.adoc'
+      - '/cfp:profile list'
+      - '/cfp:profile show'
+      - 'unverified'
+      - 'screenshot'
+      - 'bio_on_form'
+      - 'relevance_field'
