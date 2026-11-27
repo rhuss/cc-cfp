@@ -3,7 +3,8 @@
 // Sources:
 // cfp:README.md:3,5,9-17,31-41,43-59,88
 // cfp:cfp/.claude-plugin/plugin.json:2-4,8
-// cfp:cfp/knowledge-base/guidance/profile-research.md:5,39-45
+// cfp:cfp/knowledge-base/guidance/profile-research.md:5,26,39-45
+// cfp:cfp/skills/_shared/preflight-checks.md:41
 // cfp:cfp/knowledge-base/profiles/kubecon/profile.md:46-73,157-203,219
 // cfp:cfp/skills/_shared/preamble.md:24,40,45
 // cfp:cfp/commands/draft.md:1-6
@@ -24,7 +25,7 @@
 == What you get
 
 You have a talk idea, and a conference wants a proposal for it.
-The catch is the form, which often sits behind a login, so you can't see it before you start writing.
+The catch is the form, which often sits behind a login, so you can't see it until you sign in.
 It has fixed fields, character limits, a field that only the reviewers read, and rules that take a proposal out of review when you break one.
 At KubeCon + CloudNativeCon, the reviewers of a track handle 100 to 200 proposals each, and acceptance has fallen to around 8 to 11 percent.
 A generic abstract loses to a specific one, and the abstract gets 1000 characters.
@@ -35,7 +36,8 @@ At the end, every field of the conference's form is drafted, counted against its
 You see the result in one paste view: the fields in the order the form shows them, each with its character count.
 Nothing is ever submitted for you.
 You paste the texts into the conference site yourself.
-Your talk's story, your bios, and every proposal stay in a folder of plain markdown files that you can also edit by hand, ready for the next conference.
+Your talk's story, your bios, and every proposal stay in your store, a folder of plain markdown files, ready for the next conference.
+You can edit those files by hand, as long as you keep their header valid.
 
 == The parts
 
@@ -64,7 +66,7 @@ cc-prose is optional: without it, cfp skips the voice pass and tells you so.
 You type a `/cfp:` command in Claude Code, and it starts a guided conversation that asks one question at a time.
 Behind that conversation, the work is split in two.
 Everything that must be exact (reading and writing your files, counting characters, evaluating the rules, changing a proposal's status) is done by a script the conversation calls, not by the language model.
-Two kinds of rules are the exception: a rule the conference states only in free text is judged in the conversation, and the rule against sales pitches is left to the committee review.
+Two kinds of rules are the exception: a conference rule that fits none of cfp's built-in rule types is judged in the conversation, and the rule against sales pitches is left to the committee review.
 The committee review runs as a separate reviewer that may only read, and it sees nothing but a packet with your drafted fields and the conference's scoring criteria.
 The voice pass hands your texts to the cc-prose humanizer.
 
@@ -75,7 +77,7 @@ The prompt hook is a small script that runs on every prompt you submit.
 For a `/cfp:` prompt it tells the conversation where your store is, whether the store is set up, and today's date.
 
 Why run it this way?
-Because the parts you'd otherwise have to take on faith are pinned down.
+Because every number and verdict you see has a traceable origin.
 The conference's form, limits, scoring criteria, and rules are stored as data.
 Every limit carries a label that says where it came from: `screenshot` (confirmed on a screenshot of the form), `page` (read from a public page), or `unverified`.
 Character counts come from the script, which counts an emoji or a German sharp s as one character.
