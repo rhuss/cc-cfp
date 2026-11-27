@@ -157,3 +157,12 @@ rules:
       - 'relevance_field'
       - 'xref:profiles/new\.adoc'
       - 'xref:user/preflight\.adoc'
+  - glob: "content/modules/ROOT/pages/internals/architecture.adoc"
+    require:
+      - 'image::architecture\.svg\['
+      - 'UserPromptSubmit'
+      - 'cfp-context'
+      - 'cfp_store\.py'
+      - 'make test'
+      - '^// url:https://code\.claude\.com/docs/en/hooks'
+      - 'xref:reference/cli\.adoc'
