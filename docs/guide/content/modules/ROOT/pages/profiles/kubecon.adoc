@@ -1,5 +1,268 @@
 = The shipped KubeCon profile
-:guide-no-sources:
 
-// STUB
-This page is written by a later task of the guide plan.
+// Sources:
+// cfp:cfp/knowledge-base/profiles/kubecon/profile.md:2-12,13-43,44-45,47-136,137-156,157-203,204-212,213-214,219-227,231,239
+// cfp:cfp/knowledge-base/profiles/kubecon/events/kubecon-eu-2027.md:2-34,39
+// cfp:cfp/knowledge-base/profiles/kubecon/events/kubecon-na-2026.md:2-32,37
+// cfp:cfp/knowledge-base/profiles/kubecon/examples/lf-sample-container-runtime.md:2-7,11-13,23,27-36
+// cfp:cfp/scripts/cfplib/config.py:117-130,152-166
+// cfp:cfp/scripts/cfplib/seeds.py:3-8
+// cfp:cfp/scripts/cfplib/profile.py:36,63-82,254
+// cfp:cfp/scripts/cfplib/preflight.py:8-11,71-95,98-127,130-138,141-154,157-175,178-193,213-238
+// cfp:cfp/scripts/cfplib/lifecycle.py:122-131,168-169
+// cfp:cfp/scripts/cfplib/pasteview.py:19-25
+// cfp:cfp/scripts/cfplib/review.py:72
+// cfp:cfp/agents/committee-reviewer.md:34
+// cfp:cfp/skills/init/SKILL.md:51,54,58-60,67-72,76-78
+// cfp:cfp/skills/profile/SKILL.md:19,23,93,99,103
+// cfp:cfp/skills/draft/SKILL.md:49,110
+// cfp:cfp/scripts/test/test_seed_profile.py:6-13,18-23,34-43,49-56,62-69,73-75
+// cfp:README.md:63-71
+
+`cfp` ships one conference profile, for KubeCon + CloudNativeCon.
+`/cfp:init` copies it into your store already approved, together with two editions and one sample proposal, so you can draft for KubeCon right after setup without researching anything.
+This page walks through what's inside: the session types, the form fields and how sure cfp is of each limit, the rubric, the rules, and the drafting guidance.
+Knowing them tells you what cfp checks for you and where its knowledge ends.
+
+The terms profile, event, verification label, and relevance field are explained in xref:profiles/index.adoc[How profiles work].
+
+== What ships
+
+The profile has the id `kubecon` and the name KubeCon + CloudNativeCon.
+It records Sessionize (`sessionize`) as the submission platform.
+Its `seed_version` is `2026-10-11`, the version of the shipped copy; <<into-your-store>> explains what cfp does with it.
+
+The profile lists five sources: the CFP pages of the Europe and North America conferences, the reviewer guidelines page of the Europe conference, a 2023 Linux Foundation PDF, and a GitHub gist.
+Each rule names the page it comes from.
+
+The profile covers the main CFP only.
+Its notes say that co-located Day 0 events, the project benefits CFP (Maintainer Track, Project Lightning Talks, ContribFest), and the Maintainer Summit use separate Sessionize CFPs with different formats and limits.
+They need their own profiles or event overrides.
+
+== Session types
+
+The profile offers five session types:
+
+[cols="1,2,1,1,3",options="header"]
+|===
+| Id | Name | Minutes | Speakers | Notes
+| `session` | Session Presentation | 30 | 1 to 2 |
+| `panel` | Panel Discussion | 30 | 3 to 5 | All panelists named at submission. Panelists must represent more than one company.
+| `lightning` | Lightning Talk | 5 | 1 |
+| `tutorial` | Tutorial | 75 | 1 to 5 | Hands-on. 80 minutes at EU 2027, 75 minutes elsewhere.
+| `poster` | Poster Session | not set | 1 to 2 | Digital poster at a monitor in the Solutions Showcase. EU and NA only. Counts toward the proposal limit.
+|===
+
+A speaker may be on at most 3 proposals per event (`submission_limit: 3`).
+The profile also records a selection limit as text: "At most 1 panel and 1 non-panel session per speaker per event, excluding project benefits."
+It isn't one of the rules, so the pre-flight doesn't check it.
+
+== Fields and their limits
+
+The form has ten fields, in this order:
+
+[cols="2,3,2,1,1,1",options="header"]
+|===
+| Field id | Label on the form | Kind | Audience | Limit | `limit_status`
+| `title` | Session Title | `text` | public | 75 | `unverified`
+| `abstract` | Description | `longtext` | public | 1000 | `screenshot`
+| `value_to_community` | Value to the community | `longtext` | reviewer | none | `screenshot`
+| `audience_level` | Level of Expertise for Intended Audience | `choice`: Any, Beginner, Intermediate, Advanced | public | |
+| `track` | Topic | `choice`: the event's tracks | public | |
+| `format` | Session Format | `choice`: the five session type names | public | |
+| `case_study` | Case study? | `boolean` | reviewer | |
+| `previously_presented` | Talk presented before? | `longtext` | reviewer | none | `unverified`
+| `cncf_oss_projects` | Relevant CNCF/Open Source Projects | `text` | reviewer | none | `screenshot`
+| `resources` | Additional resources | `longtext` | reviewer | none | `screenshot`
+|===
+
+Every field is required except `resources`.
+`resources` is free text, matching the live form, and its guidance asks for speaker evidence: recordings of previous talks for every speaker, project links, books, and websites.
+`cncf_oss_projects` is a single field for the CNCF projects and any other open source projects the session discusses.
+
+The speaker bio isn't a form field.
+The profile sets `bio_limit` to 500 with `bio_limit_status: screenshot`.
+It doesn't set `bio_on_form`, so the default `true` applies and cfp treats the form as asking for a bio.
+
+=== Which limits a screenshot confirmed
+
+The profile's limits come from a screenshot of the KubeCon EU 2027 Sessionize form, recorded as `screenshot:sessionize-kubecon-eu-2027-2026-10-11`.
+Its drafting guidance lists what that form showed on 2026-10-11:
+
+* The Description (`abstract`) has a hard limit of 1000 characters.
+* The bio limit is 500 characters.
+* `value_to_community` shows no character limit.
+* CNCF and other open source projects are one combined field, `cncf_oss_projects`.
+
+So two numbers are confirmed: 1000 for the abstract and 500 for the bio.
+`value_to_community`, `cncf_oss_projects`, and `resources` carry the `screenshot` label from the same screenshot, but no limit.
+
+The title limit of 75 is a historic value that wasn't confirmed on the live form, so it stays `unverified`.
+The paste view shows the title's count with "(limit approximate, unverified)".
+`previously_presented` has no limit and an empty source, so it's `unverified` too.
+A field without a limit shows its count in the paste view as "chars (no limit)".
+
+=== The relevance field
+
+On this form the relevance field is `value_to_community`, the reviewer-only text in which you argue why the talk is important, relevant, and timely to the cloud native ecosystem.
+It replaced the former "Benefits to the Ecosystem".
+The drafting guidance calls it the second determining factor after the abstract, and it isn't a copy of the abstract.
+
+== The scoring rubric
+
+The committee review scores five criteria on a scale up to 5.
+A proposal passes with an average of at least 4.0 (`pass_average`) and no criterion below 3.0 (`pass_min_criterion`).
+xref:user/review.adoc[Committee review and voice pass] shows how cfp computes that verdict.
+
+[cols="2,3,3",options="header"]
+|===
+| Criterion | 1 star | 5 stars
+| Content (`content`) | unclear, incoherent, incomplete, or AI-generated | highly engaging, polished, with high-impact audience takeaways
+| Originality (`originality`) | generic, copied, a product pitch, or AI slop | bold, highly creative, novel insights for KubeCon
+| Relevance (`relevance`) | not relevant to CNCF or KubeCon, with little audience value | timely, significant cloud native challenges with wide community impact
+| Speaker (`speaker`) | examples of unengaging presentations or weak slides | a recognized leader with recorded examples of engaging talks
+| Not a Product Pitch (`not_product_pitch`) | a clear focus on proprietary software without wider ecosystem value | non-proprietary software with no signs of vendor pitching
+|===
+
+On the Speaker criterion, 2 stars means no examples of presentation experience and unclear depth with the topic.
+Recordings matter here, and xref:user/review.adoc#recordings[Recordings and the Speaker criterion] explains the cap the reviewer applies without one.
+
+== The rules
+
+The profile has seven rules, all with the severity `disqualify`.
+The pre-flight computes six of them from your store:
+
+[cols="2,3,4",options="header"]
+|===
+| Rule | What the conference says | What the pre-flight checks
+| `submission-limit` | A speaker may be on at most 3 proposals per event in any format; exceeding it may remove all of them from review. | How many of your proposals for the event are `submitted`, `accepted`, `rejected`, or `presented`. When that reaches 3 (or the event's own limit), the rule fails.
+| `repeat-one-year` | Talks presented at a CNCF or LF event within the past year aren't selected unless the submission explains significant differences. | Whether the talk has an outing for the `kubecon` profile in the last 12 months. When `previously_presented` explains the differences, the finding drops to `warn`.
+| `track-in-event` | The chosen track must be one of the event's tracks. | Whether the proposal's track is on the event's list, ignoring case. No track at all fails too.
+| `speaker-count` | The number of speakers must fit the session format. | Whether you plus your co-speakers fit the session type's minimum and maximum.
+| `all-men-panel` | No session with three or more speakers who all identify as men; applies to panels and tutorials. | For proposals with three or more speakers, whether all are men. When some genders are unknown and the rest are men, the finding is a `warn`.
+| `multi-company-panel` | Panelists must represent more than one company. | For session types that need three or more speakers (here, `panel`), whether all speakers come from one company. Unknown companies give a `warn`.
+|===
+
+The seventh rule, `vendor-pitch`, says no sales or marketing pitches, and that unlicensed or potentially closed-source technologies are almost always rejected.
+The pre-flight can't compute it and leaves it to the committee review.
+
+[WARNING]
+====
+The conference's repeat rule covers any CNCF or LF event, but the pre-flight counts only outings of your talk whose family is `kubecon`.
+`cfp` records such an outing when a KubeCon proposal of the talk becomes `presented`.
+====
+
+xref:user/preflight.adoc[Pre-flight, counts, and the paste view] explains every computed rule in detail, including where the speaker genders and companies come from.
+
+== Rejection reasons
+
+The profile lists eight reasons the conference rejects proposals.
+The committee reviewer walks through them one by one and, for each reason that applies, lowers the criterion the reason names (or the closest one):
+
+* A vendor or product pitch, or a closed-source focus.
+* Vague, generic, bullet-list-only, or AI-generated text.
+* A duplicate of a talk given at any LF event in the past year, or one of many similar submissions on a hot topic.
+* Missing or unclear takeaways and audience value.
+* The wrong track or a mislabeled audience level.
+* No evidence of speaking ability.
+* Rule violations that remove the proposal from review.
+* Program balance rather than quality, such as the same speaker or company already being selected.
+
+== The two editions
+
+Two events come with the profile, both approved:
+
+[cols="2,3,3",options="header"]
+|===
+| | `kubecon-eu-2027` | `kubecon-na-2026`
+| Name | KubeCon + CloudNativeCon Europe 2027 | KubeCon + CloudNativeCon North America 2026
+| Location | Barcelona | Salt Lake City
+| Event | 2027-03-15 to 2027-03-18 | 2026-11-09 to 2026-11-12
+| CFP open | 2026-08-10 | 2026-04-06
+| CFP close | 2026-10-11, CEST | 2026-05-31, MT
+| Notification | 2026-12-07 | 2026-08-03
+| Tracks | 13 | 11
+| Tutorial length | 80 minutes | 75 minutes
+| Submission limit | 3 | 3
+|===
+
+The Europe 2027 tracks are AI Inference + Infrastructure, Agentic AI, Cloud Native Application Development, Cloud Native Experience, Cloud Native Novice, Connectivity, Data Processing + Storage, Emerging + Advanced, Observability, Operations + Performance, "Platform Engineering: DevEx + IDPs", "Platform Engineering: Infrastructure & Delivery", and Security.
+
+The North America 2026 tracks are AI Inference + Agentic, Application Development + Delivery, Cloud Native Experience, Cloud Native Novice, Connectivity, Data Processing + Storage, Emerging + Advanced, Observability, Operations + Performance, Platform Engineering, and Security.
+
+Both events note that poster sessions are offered.
+Both CFPs closed before this guide's baseline date, {baseline-date}.
+`/cfp:draft` warns when an event's CFP has closed and keeps going, for a future edition or as practice.
+This guide uses `kubecon-eu-2027` as a practice run.
+
+== The sample proposal
+
+The profile comes with one example, `lf-sample-container-runtime`, an official sample from the Linux Foundation's CFP page (2023).
+Its title is "OCI, CRI, ??: Making Sense of the Container Runtime Landscape in Kubernetes".
+The example's own note says that the title is the one shown on the LF CFP page, while the abstract and benefits texts are a reconstruction, not the verbatim sample.
+
+A "Why it worked" section explains what makes the sample strong:
+
+* The title is specific and names the exact technology and context.
+* The first sentence states who has the problem and why.
+* The benefits text doesn't restate the abstract; it says why the topic matters now.
+* Named technologies replace generic claims.
+* Each persona gets one line on what it gains.
+* The abstract closes with explicit takeaways.
+
+The committee review uses examples like this one to calibrate its scores, as xref:user/review.adoc#calibration[Accepted proposals as calibration examples] explains.
+
+== The drafting guidance
+
+Every field carries its own guidance, which `/cfp:draft` follows when it drafts that field.
+On top of that, the profile has a drafting guidance section for the whole proposal.
+Its main points:
+
+* Reviewers in a track handle 100 to 200 proposals each and score in Sessionize's star-rating mode, and acceptance is around 8 to 11 percent.
+The first two sentences of the abstract carry the value proposition: the audience's problem and what the session gives them.
+* The abstract is session-centric: "this session", no speaker or company names, "we" but never "I", full sentences, no bullet lists.
+A live demo is named along with what it shows, and the takeaways are explicit ("Attendees will leave with ...").
+* Co-chairs look for the full story: the hard parts, what was learned, and what's still unknown.
+* `value_to_community` says who benefits by persona and what each gains, why the topic matters now, what's new compared with prior talks, the speaker's evidence, and the data or case study the session shows.
+* Pick the track carefully, because many strong proposals are submitted under the wrong track.
+Choose the audience level the abstract really serves, because reviewers correct mismatches and penalize them.
+* Link a recording of a previous talk in `resources`.
+* Keep vendor or product language out of every field and keep the speaker's own phrasing.
+The form's Content Quality Agreement warns that AI-generated slop can remove a submission from review and ban the speaker from future CNCF CFPs.
+
+xref:user/draft.adoc[Draft a proposal] shows the guidance at work.
+
+[#into-your-store]
+== How the profile gets into your store
+
+The plugin carries the shipped profile in its `knowledge-base/profiles` folder.
+`/cfp:init` copies every shipped profile that your store doesn't have yet into `profiles/` and marks it approved, so drafting works immediately.
+It never overwrites a profile that's already there.
+When `default_profile` in your config is empty, `/cfp:init` sets it to the first profile in the store.
+
+The `seed_version` tells cfp which shipped version your copy came from.
+A later plugin version can ship a newer profile with a higher `seed_version`.
+`/cfp:init` compares the two on every run and, when your copy is outdated, shows you the differences with both versions and asks before it replaces anything.
+A store profile without a `seed_version` was researched or written by hand and is never replaced.
+xref:profiles/refresh.adoc[Refresh a profile and update shipped ones] walks you through that update.
+
+== Confirm the limits with screenshots
+
+The live Sessionize form sits behind a login, so cfp can't fetch it.
+The title limit is still `unverified`, and a new edition can change any limit.
+Screenshots of the form fix both.
+
+. Open the edition's Sessionize form in your browser and take a screenshot of each page.
+. In Claude Code, run the refresh with the screenshots as a comma-separated list:
++
+[source,text]
+----
+/cfp:profile refresh kubecon --event kubecon-eu-2027 --screenshots ~/Desktop/form-1.png,~/Desktop/form-2.png
+----
++
+`--event` names the edition: an existing event id like `kubecon-eu-2027`, a new id, or the URL of the edition's CFP page.
++
+Check: cfp reads each screenshot and presents the event's sections one at a time, with field overrides among them, and asks you to approve, edit, or re-research each.
+Every limit a screenshot confirms is marked `screenshot`, with `screenshot:<file name>` as its source.
+
+xref:profiles/refresh.adoc[Refresh a profile and update shipped ones] covers the full refresh, including what happens when a screenshot contradicts a public page.

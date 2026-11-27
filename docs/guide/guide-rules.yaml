@@ -116,3 +116,15 @@ rules:
       - 'screenshot'
       - 'bio_on_form'
       - 'relevance_field'
+  - glob: "content/modules/ROOT/pages/profiles/kubecon.adoc"
+    require:
+      - 'seed_version'
+      - 'value_to_community'
+      - 'cncf_oss_projects'
+      - 'Sessionize'
+      - '/cfp:profile refresh kubecon'
+      - 'kubecon-eu-2027'
+      - 'kubecon-na-2026'
+      - 'xref:profiles/refresh\.adoc'
+    forbid:
+      - '\b1300\b'
