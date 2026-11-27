@@ -51,3 +51,15 @@ rules:
       - 'xref:user/status\.adoc'
     forbid:
       - 'cfp_store\.py'
+  - glob: "content/modules/ROOT/pages/user/draft.adoc"
+    require:
+      - 'image::draft-workflow\.svg\['
+      - '/cfp:draft'
+      - '--proposal'
+      - '--from'
+      - 'kubecon-eu-2027'
+      - '(?i)closed|deadline has passed'
+      - 'relevance_field|relevance field'
+      - 'xref:user/review\.adoc'
+      - 'xref:user/preflight\.adoc'
+      - 'xref:profiles/refresh\.adoc'
