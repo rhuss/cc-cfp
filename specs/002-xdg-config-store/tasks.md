@@ -66,8 +66,8 @@
 
 ## Phase 7: Polish
 
-- [ ] T018 Run `make test`, `make test-hook`, `make lint-dashes`; fix failures.
-- [ ] T019 Run quickstart.md script-level scenarios 1 to 6 and the docs search (8) in a scratch HOME under the session scratchpad; record outcomes in `specs/002-xdg-config-store/quickstart-results.md`. List scenario 7 for the user, including the `kubecon` clash check that the warning appears exactly once.
+- [X] T018 Run `make test`, `make test-hook`, `make lint-dashes`; fix failures.
+- [X] T019 Run quickstart.md script-level scenarios 1 to 6 and the docs search (8) in a scratch HOME under the session scratchpad; record outcomes in `specs/002-xdg-config-store/quickstart-results.md`. List scenario 7 for the user, including the `kubecon` clash check that the warning appears exactly once.
 
 ## Dependencies
 
