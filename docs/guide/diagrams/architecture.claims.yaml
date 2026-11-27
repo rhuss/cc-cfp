@@ -1,0 +1,138 @@
+diagram: architecture
+claims:
+  - id: you
+    kind: label
+    elements: [you]
+    text: "The reader starts cfp by typing a /cfp: command and answers the skill's questions, one at a time."
+    sources:
+      - "cfp:cfp/commands/draft.md:1-6"
+      - "cfp:cfp/skills/_shared/preamble.md:40"
+  - id: claude-code-frame
+    kind: contains
+    elements: [fr_cc, fr_cc_title, hook, cmd, skill, cli, agent, human, a_hook_cmd, a_cmd_skill, a_skill_cli, a_skill_agent, a_skill_human]
+    text: >-
+      cfp is a Claude Code plugin. Claude Code loads a plugin as one unit (skills, agents, hooks)
+      and runs its command, skills, hook, and agent; the store CLI runs as a script the skills
+      call; the cc-prose humanizer is a skill of another plugin in the same session.
+    sources:
+      - "cfp:README.md:3,15,17"
+      - "url:https://code.claude.com/docs/en/plugins/overview.md"
+      - "cfp:cfp/skills/_shared/preamble.md:24-28"
+  - id: hook
+    kind: label
+    elements: [hook]
+    text: "A UserPromptSubmit hook runs a script on every submitted prompt; the script returns at once unless the prompt starts with /cfp:."
+    sources:
+      - "cfp:cfp/hooks.json:4-12"
+      - "cfp:cfp/hooks/scripts/context-hook.py:43-47"
+      - "url:https://code.claude.com/docs/en/hooks.md"
+  - id: hook-adds-context
+    kind: connects
+    elements: [a_hook_cmd]
+    text: >-
+      For a /cfp: prompt the hook returns additionalContext with the <cfp-context> block (plugin
+      root, store, store-initialized, today); Claude Code inserts it alongside the submitted prompt.
+    sources:
+      - "cfp:cfp/hooks/scripts/context-hook.py:55-69"
+      - "url:https://code.claude.com/docs/en/hooks.md"
+  - id: command
+    kind: label
+    elements: [cmd]
+    text: "A /cfp: command is a command file in the plugin (for example commands/draft.md)."
+    sources:
+      - "cfp:cfp/commands/draft.md:1-6"
+      - "url:https://code.claude.com/docs/en/skills.md"
+  - id: you-types
+    kind: connects
+    elements: [a_you_cmd]
+    text: "The reader types the /cfp: command."
+    sources:
+      - "cfp:cfp/commands/draft.md:1-6"
+      - "cfp:README.md:31-41"
+  - id: command-to-skill
+    kind: connects
+    elements: [a_cmd_skill]
+    text: "The command file hands its arguments ($ARGUMENTS) to the skill of the same name."
+    sources:
+      - "cfp:cfp/commands/draft.md:6"
+      - "url:https://code.claude.com/docs/en/skills.md"
+  - id: skill
+    kind: label
+    elements: [skill]
+    text: "The cfp skills (for example cfp:draft, cfp:committee-review) do the interactive work."
+    sources:
+      - "cfp:cfp/commands/draft.md:6"
+      - "cfp:cfp/skills/committee-review/SKILL.md:1-10"
+  - id: store-cli
+    kind: label
+    elements: [cli]
+    text: "cfp_store.py is the single CLI entry point for the store."
+    sources:
+      - "cfp:cfp/scripts/cfp_store.py:1-9"
+  - id: skill-to-cli
+    kind: connects
+    elements: [a_skill_cli]
+    text: "Every deterministic (exact) store operation of a skill goes through the CLI; every call prints one JSON object."
+    sources:
+      - "cfp:cfp/skills/_shared/preamble.md:22-31"
+      - "cfp:cfp/scripts/cfp_store.py:1-9"
+  - id: store
+    kind: label
+    elements: [store]
+    text: "The store is plain markdown files with YAML front matter that the reader owns (it renders in Obsidian and can also be edited by hand)."
+    sources:
+      - "cfp:README.md:43-59"
+  - id: cli-to-store
+    kind: connects
+    elements: [a_cli_store]
+    text: "The CLI reads and writes the store files; skills never edit store files directly."
+    sources:
+      - "cfp:cfp/skills/_shared/preamble.md:24"
+      - "cfp:cfp/scripts/cfp_store.py:1-9"
+  - id: agent
+    kind: label
+    elements: [agent]
+    text: "The committee-reviewer agent is a subagent whose tools are limited to Read."
+    sources:
+      - "cfp:cfp/agents/committee-reviewer.md:2,5"
+      - "url:https://code.claude.com/docs/en/sub-agents.md"
+  - id: skill-to-agent
+    kind: connects
+    elements: [a_skill_agent]
+    text: >-
+      The committee-review skill writes a packet file and starts the reviewer agent with only the
+      packet path; the agent reads only that file and replies with one JSON object, which the skill
+      validates.
+    sources:
+      - "cfp:cfp/skills/committee-review/SKILL.md:16-47"
+      - "cfp:cfp/agents/committee-reviewer.md:14"
+  - id: humanizer
+    kind: label
+    elements: [human]
+    text: "prose:humanizer is a skill of the separate cc-prose plugin; it is optional, and without it the voice pass is skipped."
+    sources:
+      - "cfp:README.md:17"
+      - "cfp:cfp/skills/draft/SKILL.md:155-157"
+      - "prose:README.md:3"
+  - id: skill-to-humanizer
+    kind: connects
+    elements: [a_skill_human]
+    text: "The draft skill invokes prose:humanizer in its voice pass."
+    sources:
+      - "cfp:cfp/skills/draft/SKILL.md:151-158"
+  - id: form
+    kind: label
+    elements: [form]
+    text: "The conference form is outside cfp; cfp never submits anything to a conference website."
+    sources:
+      - "cfp:README.md:5"
+      - "cfp:cfp/skills/_shared/preamble.md:45"
+  - id: you-pastes
+    kind: connects
+    elements: [a_you_form]
+    text: "The reader pastes the texts into the conference site."
+    sources:
+      - "cfp:README.md:5"
+  - id: legend
+    kind: legend
+    elements: [lg_title, lg_gray, lg_gray_t, lg_blue, lg_blue_t, lg_orange, lg_orange_t]
