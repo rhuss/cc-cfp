@@ -41,3 +41,13 @@ rules:
       - 'git clone'
       - 'make install'
       - '/cfp:init'
+  - glob: "content/modules/ROOT/pages/user/index.adoc"
+    require:
+      - 'image::store-model\.svg\['
+      - 'xref:user/draft\.adoc'
+      - 'xref:user/review\.adoc'
+      - 'xref:user/preflight\.adoc'
+      - 'xref:user/bios\.adoc'
+      - 'xref:user/status\.adoc'
+    forbid:
+      - 'cfp_store\.py'
