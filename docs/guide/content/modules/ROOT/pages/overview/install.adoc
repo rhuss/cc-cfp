@@ -137,8 +137,6 @@ Your store keeps its own copy of the shipped profile.
 When the shipped one is newer, `/cfp:init` shows you the differences and offers to update your copy.
 xref:profiles/refresh.adoc[Refresh a profile and update shipped ones] walks through that update.
 
-Running `make install` again in your clone updates the marketplace and reinstalls the plugin.
-
 == A second store with CFP_STORE
 
 `cfp` looks for the store in this order: `--store <path>` on a store CLI call, then the `CFP_STORE` environment variable, then `~/.config/cc-cfp/config.json`.
@@ -151,15 +149,18 @@ Running `make install` again in your clone updates the marketplace and reinstall
 /cfp:init --store ~/cfp-store-2
 ----
 +
-With `--store`, `/cfp:init` takes that path without asking for one, then asks the remaining questions.
+With `--store`, `/cfp:init` takes that path without asking for one.
 +
 [WARNING]
 ====
-Setting up a store writes its path to `~/.config/cc-cfp/config.json`.
-After this step, every session without `CFP_STORE` uses the second store.
-To make your first store the default again, run `/cfp:init` in such a session, choose `use a different path`, and enter your first store's path.
-It asks the setup questions again.
+Setting up a store writes its path to `~/.config/cc-cfp/config.json`, so the second store is now your default.
+The next step makes your first store the default again.
 ====
+
+. Start Claude Code without `CFP_STORE`, run `/cfp:init`, choose `use a different path`, and enter your first store's path.
+`/cfp:init` asks the setup questions again and writes that path back to `~/.config/cc-cfp/config.json`.
++
+Check: the `/cfp:init` summary lists your first store as the store path.
 
 . Start a session on the second store from your shell:
 +
@@ -186,8 +187,7 @@ CFP_STORE=~/cfp-store-2 python3 -I cfp/scripts/cfp_store.py config show
 There are two ways this shows up.
 
 The `/cfp:` commands don't appear when you type `/`::
-A plugin you install from your shell loads the next time you start Claude Code, or when you run `/reload-plugins` in an open session.
-Do one of the two.
+A plugin you install from your shell loads the next time you start Claude Code or when you run `/reload-plugins` in an open session, so restart Claude Code or run `/reload-plugins`.
 If `claude plugin list` in your shell doesn't show `cfp@cc-cfp-marketplace`, run `make install` again in your clone.
 
 A `/cfp:` command says the plugin seems not to be installed correctly, and stops::
