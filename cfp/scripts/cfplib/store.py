@@ -36,16 +36,18 @@ def slugify(text, existing=None):
 
 
 def case_alias(directory, name):
-    """The entry of ``directory`` that ``name`` reaches only through case folding (APFS, NTFS), else None.
+    """The entry of ``directory`` that differs from ``name`` only in case, else None.
 
-    On a case-sensitive file system, or when the exact name exists, or when
-    the folder cannot be listed, the result is None.
+    Profile names are case-insensitive on every file system (like
+    ``existing_ids``): on APFS or NTFS both spellings are one folder, and on a
+    case-sensitive file system two such profiles would behave differently per
+    platform. None when the exact name exists or the folder cannot be listed.
     """
     try:
         names = os.listdir(directory)
     except OSError:
         return None
-    if name in names or not (Path(directory) / name).exists():
+    if name in names:
         return None
     return next((entry for entry in names if entry.lower() == name.lower()), None)
 

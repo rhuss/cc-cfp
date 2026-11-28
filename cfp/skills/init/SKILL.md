@@ -24,7 +24,7 @@ Otherwise pick a default:
 - Run `python3 -I "$PLUGIN_ROOT/scripts/cfp_store.py" config show` and take `store` from the result. It is an absolute path: `CFP_STORE` when set, else the `store` entry of the config file, else the neutral default `<data folder>/store` (for example `~/.local/share/cc-cfp/store`). On `"ok": false`, show the error (it names the environment variable to fix) and stop.
 - Use Glob on `~/Obsidian/*` (directories). For up to three vaults, sorted by name, add `~/Obsidian/<vault>/Talks` as further choices. Never make a vault the default; further vaults can be typed into the free-text option.
 
-Ask (AskUserQuestion): "Where should the store live?" with the default first, marked as recommended and shown as the full absolute path, then the vault choices, then "Other" (free text). Expand `~`.
+Ask (AskUserQuestion): "Where should the store live?" with the default first, marked as recommended and shown as the full absolute path, then the vault choices. Do not list an "Other" option: the question tool adds a free-text option itself, and it allows at most four options. When no vault exists, add `choose another folder` as the second option and, when picked, ask for the path in free text. Expand `~`.
 
 ## Step 2: Speaker name and company
 
@@ -60,7 +60,7 @@ Keep the `warnings` of the result for this run and show each one once. These kin
 - `profile '<name>': using <user folder> instead of the shipped <plugin folder>`: a personal profile replaces the shipped one of the same name. Step 6 reports the same clash again; show it only once per run (de-duplicate by profile name).
 - `profile folder '<name>' in <user folder> skipped: ...`: the folder name is not usable (not a valid profile id, or it differs from a shipped profile only in case); tell the user to rename the folder as the message says.
 - `profile '<name>' from <user folder> skipped: ...`: the personal profile could not be read (the message names the file); tell the user to fix it and run `/cfp:init` again, which then copies it.
-- `profile '<name>' from <folder> not used: the store already has '<existing>', ...`: the file system treats both names as one folder (macOS, Windows), so the seed is never copied, compared or updated; tell the user to rename one of them so the names differ in more than case.
+- `profile '<name>' from <folder> not used: the store already has '<existing>', ...`: profile names are case-insensitive, so the seed is never copied, compared or updated; tell the user to rename one of them so the names differ in more than case.
 
 On `"ok": false`, show the error and ask whether to try a different path.
 

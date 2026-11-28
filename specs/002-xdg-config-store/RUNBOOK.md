@@ -160,13 +160,14 @@ mkdir -p specs/002-xdg-config-store/.walkthrough/h/d/.local/share/cc-cfp/profile
 
 **Why this step:** the init skill must offer the XDG default first, list vault folders only as extra choices, show the clash once, and name the personal profiles folder (FR-006, FR-007, FR-012).
 
-**Needs:** Step 7, the plugin installed from this checkout (`make install`).
+**Needs:** Step 7, and the plugin installed from this checkout under the scratch HOME of this step (sub-step 2), because `make install` registers it in the `~/.claude` of the HOME it runs under.
 
 **Do:**
 
 1. In a terminal, create two vault folders: `mkdir -p specs/002-xdg-config-store/.walkthrough/h/d/Obsidian/private specs/002-xdg-config-store/.walkthrough/h/d/Obsidian/work`.
-2. Start Claude Code with that HOME: `HOME="$PWD/specs/002-xdg-config-store/.walkthrough/h/d" claude` (log in if asked).
-3. Run `/cfp:init`, choose "re-run setup" or follow the prompts, and accept defaults.
+2. Install the plugin under that HOME: `HOME="$PWD/specs/002-xdg-config-store/.walkthrough/h/d" make install`.
+3. Start Claude Code with that HOME and without path overrides from your shell: `env -u CFP_STORE -u CFP_CONFIG_DIR -u CFP_DATA_DIR -u XDG_CONFIG_HOME -u XDG_DATA_HOME HOME="$PWD/specs/002-xdg-config-store/.walkthrough/h/d" claude` (log in if asked).
+4. Run `/cfp:init`, choose "re-run setup" or follow the prompts, and accept defaults.
 
 **What you should see:** the store question offers the absolute `.../h/d/.local/share/cc-cfp/store` first (recommended), then `.../Obsidian/private/Talks` and `.../Obsidian/work/Talks`, plus free text. The `kubecon` clash warning appears exactly once in the run. The final report names the config file and the personal profiles folder.
 

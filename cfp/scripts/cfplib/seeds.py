@@ -63,7 +63,13 @@ def collect(plugin_dir, user_dir=None):
     if user_dir is not None and Path(user_dir).is_dir():
         index = {entry["name"]: i for i, entry in enumerate(entries)}
         folded = {entry["name"].lower(): entry["name"] for entry in entries}
-        for folder in _profile_folders(user_dir):
+        try:
+            folders = _profile_folders(user_dir)
+        except OSError as error:
+            # The personal source is optional: report it and keep the shipped seeds.
+            warnings.append(f"personal profiles in {user_dir} skipped: {error.strerror or error}")
+            folders = []
+        for folder in folders:
             try:
                 store.check_id(folder.name, "profile id")
             except CfpError:
@@ -205,10 +211,10 @@ def _entry_status(store_path, entry):
 
 
 def alias_warning(entry, existing):
-    """The warning for a seed whose store folder exists only under another case (see store.case_alias)."""
+    """The warning for a seed whose name differs from a store profile only in case (see store.case_alias)."""
     return (
         f"profile '{entry['name']}' from {entry['dir']} not used: the store already has '{existing}', "
-        "which this file system treats as the same folder; rename one of them so the names differ in more than case"
+        "and profile names must differ in more than case; rename one of them"
     )
 
 

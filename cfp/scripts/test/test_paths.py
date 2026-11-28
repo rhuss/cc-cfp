@@ -294,3 +294,28 @@ def test_defaults_use_os_environ_and_home(tmp_path, monkeypatch):
     assert paths.data_dir() == tmp_path / "d"
     assert paths.config_dir() == Path(os.environ["HOME"]) / ".config" / "cc-cfp"
     assert paths.resolve_store(None) == ((tmp_path / "d" / "store").resolve(), "default")
+
+
+def test_unreadable_config_file_is_an_error_not_an_empty_config(tmp_path, monkeypatch):
+    from pathlib import Path
+
+    from cfplib import CfpError
+
+    home = tmp_path / "home"
+    config = home / ".config" / "cc-cfp" / "config.json"
+    config.parent.mkdir(parents=True)
+    config.write_text('{"store": "/somewhere"}', encoding="utf-8")
+    real_read_text = Path.read_text
+
+    def read_text(self, *args, **kwargs):
+        if self == config:
+            raise PermissionError(13, "Permission denied")
+        return real_read_text(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", read_text)
+    with pytest.raises(CfpError) as info:
+        paths.resolve_store(None, env={}, home=home)
+    assert str(info.value) == f"cannot read the config file {config}: Permission denied"
+    config.write_bytes(b"\xff not utf-8")
+    monkeypatch.setattr(Path, "read_text", real_read_text)
+    assert paths.read_config(env={}, home=home) == ({}, config)  # malformed stays an empty config

@@ -26,7 +26,7 @@ Adds `warnings: [str]`, `config_write_path` (the file written), and `user_profil
 
 Optional hidden argument `--user-seed-dir <path>` (tests) overrides `user_profiles_dir`.
 
-A seed profile, shipped or personal, is exactly `profile.md`, `events/*.md` and `examples/*.md`; init copies those files as regular files and skips symlinked `events/` or `examples/` folders and files. A clash needs the exact same name. A user folder whose name differs from a shipped one only in case is skipped with a warning on every file system (on APFS and NTFS both names are one store folder). A seed whose store folder exists only under another case (for example a personal `ACME` and a store profile `acme` on APFS) is not copied by init, left out of seed-status and refused by seed-update, each with the warning `profile '<name>' from <dir> not used: the store already has '<existing>', ...`.
+A seed profile, shipped or personal, is exactly `profile.md`, `events/*.md` and `examples/*.md`; init copies those files as regular files and skips symlinked `events/` or `examples/` folders and files. A clash needs the exact same name. A user folder whose name differs from a shipped one only in case is skipped with a warning on every file system (on APFS and NTFS both names are one store folder). Profile names are case-insensitive on every file system: a seed whose name differs from an existing store profile only in case (for example a personal `ACME` and a store profile `acme`) is not copied by init, left out of seed-status and refused by seed-update, each with the warning `profile '<name>' from <dir> not used: the store already has '<existing>', ...`.
 
 ## `profile seed-status`
 

@@ -186,7 +186,7 @@ a|* `--profile <id>`, required
 |`seed-status`
 a|* `--seed-dir <path>`, required: the shipped profiles
 * `--user-seed-dir <path>`: overrides the personal profiles folder (for tests)
-|`seeds`: one entry per seed profile, shipped or personal (except a seed whose store folder exists only under another case; it is left out with a warning), with `profile`, `state`, `store_version`, `seed_version`, `files`, `source` (`plugin` or `user`), and `seed_dir` (the folder it was read from).
+|`seeds`: one entry per seed profile, shipped or personal (except a seed whose name differs from an existing store profile only in case; it is left out with a warning), with `profile`, `state`, `store_version`, `seed_version`, `files`, `source` (`plugin` or `user`), and `seed_dir` (the folder it was read from).
 States: `missing`, `current`, `outdated`, `newer`, `local`, `unreadable`.
 For an `outdated` profile, `files` lists each seed file as `same`, `changed` (with a `diff`), `missing`, or `unreadable` (with an `error`).
 `seed-update --all` leaves unreadable files out and lists them under `skipped`, and naming one in `--files` refuses the update before anything is written.
@@ -207,7 +207,7 @@ Works only on an `outdated` profile, also one that exists only in the personal p
 An unknown profile fails with `no seed profile '<id>' in <plugin dir> or <user dir>`.
 `profile.md` is always replaced.
 Replaced profile and event files keep the approval flag of the store copy.
-A profile whose store folder exists only under another case (macOS, Windows) is refused with the same `not used` warning text.
+A profile whose name differs from an existing store profile only in case is refused with the same `not used` warning text (profile names are case-insensitive).
 When the store's `profiles/` folder, the store profile folder, its `events/` or `examples/` folder, or a file to be written is a symlink, the update is refused before anything is written, because the write would change a file outside the store.
 |===
 

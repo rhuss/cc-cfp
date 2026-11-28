@@ -476,15 +476,6 @@ def test_case_only_variant_of_a_shipped_name_is_skipped(tmp_path):
     ]
 
 
-def _case_insensitive(folder):
-    probe = folder / "CaseProbe"
-    probe.mkdir()
-    try:
-        return (folder / "caseprobe").exists()
-    finally:
-        probe.rmdir()
-
-
 def test_seed_with_a_case_alias_in_the_store_is_never_compared_or_written(seeded_store, tmp_path):
     first = tmp_path / "first"
     user_seed(first, "acme", version="2026-01-01")
@@ -496,12 +487,10 @@ def test_seed_with_a_case_alias_in_the_store_is_never_compared_or_written(seeded
     second = tmp_path / "second"
     folder = user_seed(second, "ACME")
     listing, warnings = seeds.status_report(seeded_store, SEED_DIR, second)
-    if not _case_insensitive(seeded_store / "profiles"):
-        assert {s["profile"]: s["state"] for s in listing}["ACME"] == "missing" and warnings == []
-        return
+    # Profile names are case-insensitive on every file system, so the result is the same on APFS and ext4.
     expected = (
-        f"profile 'ACME' from {folder} not used: the store already has 'acme', which this file system treats as "
-        "the same folder; rename one of them so the names differ in more than case"
+        f"profile 'ACME' from {folder} not used: the store already has 'acme', "
+        "and profile names must differ in more than case; rename one of them"
     )
     assert [s["profile"] for s in listing] == ["kubecon"] and warnings == [expected]
     with pytest.raises(CfpError) as info:
@@ -510,6 +499,7 @@ def test_seed_with_a_case_alias_in_the_store_is_never_compared_or_written(seeded
     assert stored.read_bytes() == before
     again = config.init_store(seeded_store, {"speaker_name": "A"}, seed_dir=SEED_DIR, user_seed_dir=second)
     assert again["seeded_profiles"] == [] and again["warnings"] == [expected]
+    assert sorted(p.name for p in (seeded_store / "profiles").iterdir()) == ["acme", "kubecon"]
 
 
 def test_update_refuses_a_symlinked_profiles_folder(tmp_path, tmp_home):
@@ -553,18 +543,15 @@ def test_update_error_names_personal_profile(seeded_store, tmp_path):
 
 
 def test_case_alias_on_any_file_system(tmp_path, monkeypatch):
-    """Host-independent: drive store.case_alias with a faked lookup, so Linux CI covers the alias branch."""
+    """The same answers on case-sensitive and case-insensitive file systems."""
     import os
-    from pathlib import Path
 
     folder = tmp_path / "profiles"
     folder.mkdir()
     (folder / "acme").mkdir()
     assert store.case_alias(folder, "acme") is None  # exact name
-    assert store.case_alias(folder, "zeta") is None  # does not exist
+    assert store.case_alias(folder, "zeta") is None  # no match in any case
     assert store.case_alias(tmp_path / "missing", "acme") is None  # cannot be listed
-    real_exists = Path.exists
-    monkeypatch.setattr(Path, "exists", lambda self, *a, **k: self.name == "ACME" or real_exists(self, *a, **k))
     assert store.case_alias(folder, "ACME") == "acme"
 
     def denied(path):
@@ -586,3 +573,19 @@ def test_alias_is_skipped_and_refused_on_any_file_system(seeded_store, tmp_path,
         seeds.update(seeded_store, SEED_DIR, "ACME", all_files=True, user_dir=user_dir)
     assert str(info.value) == expected
     assert (seeded_store / "profiles" / "kubecon" / "profile.md").read_bytes() == before
+
+
+def test_unreadable_personal_profiles_folder_keeps_shipped_seeds(tmp_path, monkeypatch):
+    user_dir = tmp_path / "profiles"
+    user_dir.mkdir()
+    real_iterdir = type(user_dir).iterdir
+
+    def iterdir(self):
+        if self == user_dir:
+            raise PermissionError(13, "Permission denied")
+        return real_iterdir(self)
+
+    monkeypatch.setattr(type(user_dir), "iterdir", iterdir)
+    entries, warnings = seeds.collect(SEED_DIR, user_dir)
+    assert [(e["name"], e["source"]) for e in entries] == [("kubecon", "plugin")]
+    assert warnings == [f"personal profiles in {user_dir} skipped: Permission denied"]

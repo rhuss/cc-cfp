@@ -170,11 +170,12 @@ def init_store(store, values, seed_dir=None, user_seed_dir=None):
     entries, warnings = seeds.collect(seed_dir or None, user_seed_dir)
     for entry in entries:
         target = store / "profiles" / entry["name"]
+        existing = store_module.case_alias(target.parent, target.name)
+        if existing is not None:
+            # 'Acme' next to 'acme' is one folder on APFS or NTFS; never copy it on any file system.
+            warnings.append(seeds.alias_warning(entry, existing))
+            continue
         if target.exists() or target.is_symlink():
-            existing = store_module.case_alias(target.parent, target.name)
-            if existing is not None:
-                # On APFS or NTFS 'Acme' and 'acme' are one folder; say so instead of skipping silently.
-                warnings.append(seeds.alias_warning(entry, existing))
             continue
         try:
             if not _seed_profile(entry["dir"], target):

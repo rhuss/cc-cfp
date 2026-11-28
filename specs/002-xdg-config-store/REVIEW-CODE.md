@@ -105,7 +105,7 @@ Key fixes applied:
   1. Personal profiles are copied as regular files; seed-update refuses to write through symlinks, so store writes never change the user's own files (security, production)
   2. Profile folder names that are not valid ids are skipped with a warning before they reach store paths or skill shell arguments (security)
   3. A broken personal profile is skipped with a warning naming the source file; seeding uses a unique staging folder, so no partial copy remains and init still saves the config (correctness, production, coderabbit)
-  4. seed-status reports unreadable seeds and seed files instead of failing for every profile; seed-update loads every file before writing and never half-applies (re-review r1, r2)
+  4. seed-status reports unreadable seeds and seed files instead of failing for every profile; seed-update loads every file before writing, so unreadable seed files refuse the update before any write, but a store write that fails after the first write can leave earlier files updated (re-review r1, r2)
   5. The context hook uses os.stat, so an inaccessible store gives `<store-error>` on Python 3.14+ too (production, re-review r1)
   6. config init warns separately about an invalid CFP_STORE (correctness)
   7. Init skill: config show on "keep it as it is", new warning kinds, unreadable files and `--all`, re-run setup for a still-missing profile, skipped files not offered again (architecture, re-review, coderabbit)

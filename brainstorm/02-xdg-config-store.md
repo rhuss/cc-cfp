@@ -10,7 +10,7 @@
 ## Decisions
 
 - Config folder: `CFP_CONFIG_DIR`, else `$XDG_CONFIG_HOME/cc-cfp`, else `~/.config/cc-cfp`. The existing `~/.config/cc-cfp/config.json` keeps working.
-- Store resolution: `--store`, `CFP_STORE`, config `store`, then the neutral default `$XDG_DATA_HOME/cc-cfp/store` (`~/.local/share/cc-cfp/store`).
+- Store resolution: `--store`, `CFP_STORE`, config `store`, then the neutral default `<data folder>/store` (by default `~/.local/share/cc-cfp/store`).
 - Init no longer defaults to Obsidian; detected vault `Talks` folders stay as extra choices.
 - Data folder: `CFP_DATA_DIR`, else `$XDG_DATA_HOME/cc-cfp`, else `~/.local/share/cc-cfp`. Its `profiles/` subfolder is a second seed source.
 - Name clash between a user profile and a shipped profile: the user profile wins, with a warning.

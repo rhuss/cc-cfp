@@ -92,9 +92,22 @@ def legacy_config_file(home=None):
 
 
 def _load_json_object(path):
+    """The JSON object in ``path``; {} when it is malformed or holds no object.
+
+    A file that exists but cannot be read raises CfpError: silently treating it
+    as empty would send every command to the default store.
+    """
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return {}
+    except UnicodeDecodeError:
+        return {}
+    except OSError as error:
+        raise CfpError(f"cannot read the config file {path}: {error.strerror or error}") from None
+    try:
+        data = json.loads(text)
+    except ValueError:
         return {}
     return data if isinstance(data, dict) else {}
 
@@ -104,7 +117,7 @@ def read_config(env=None, home=None):
 
     ``read_path`` is None when no file was found. A file that exists but is
     malformed or holds no JSON object gives ``({}, path)``; it never leads to
-    the legacy fallback.
+    the legacy fallback. A file that exists but cannot be read raises CfpError.
     """
     path = config_file(env, home)
     if path.exists():

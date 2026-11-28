@@ -21,7 +21,7 @@ The `UserPromptSubmit` hook injects a `<cfp-context>` block for every `/cfp:` pr
 1. Set `PLUGIN_ROOT` to the `<plugin-root>` value and `STORE` to the `<store>` value. Use `<today>` as the current date for every date decision and pass it as `--today` when a subcommand accepts it.
 2. If `<cfp-context>` is missing, the hook did not fire. Tell the user the plugin seems not to be installed correctly (run `make install` in the plugin repository) and stop.
 3. If `<store-error>` is present, show its text to the user, then stop. When it names `CFP_STORE`, `CFP_CONFIG_DIR`, or `CFP_DATA_DIR`, add a hint to fix or unset that variable (for example in the shell profile or the `env` section of the Claude Code settings); when it says a `config.md` cannot be accessed, add a hint to check that path (folder permissions, symlinks). Do not offer `/cfp:init`; it would fail the same way.
-4. If `<store-initialized>` is `false` and this skill is not `cfp:init`: say that the store is not set up yet and ask (AskUserQuestion) whether to run `/cfp:init` now. On yes, invoke the `cfp:init` skill and continue with this skill afterwards. On no, stop.
+4. If `<store-initialized>` is `false` and this skill is not `cfp:init`: say that the store is not set up yet and ask (AskUserQuestion) whether to run `/cfp:init` now. On yes, invoke the `cfp:init` skill, then run `python3 -I "$PLUGIN_ROOT/scripts/cfp_store.py" config show` and set `STORE` to its `store` (the user may have chosen another path during setup), and continue with this skill. On no, stop.
 
 ## Calling the store CLI
 
