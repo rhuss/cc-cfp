@@ -23,6 +23,48 @@ if str(SCRIPTS_DIR) not in sys.path:
 PATH_ENV_VARS = ("XDG_CONFIG_HOME", "XDG_DATA_HOME", "CFP_CONFIG_DIR", "CFP_DATA_DIR", "CFP_STORE")
 
 
+def _real_config_files():
+    """The developer's real config.json candidates, taken before any test changes the environment."""
+    home = Path(os.path.expanduser("~"))
+    files = {home / ".config" / "cc-cfp" / "config.json"}
+    xdg = os.environ.get("XDG_CONFIG_HOME", "").strip()
+    if os.path.isabs(xdg):
+        files.add(Path(xdg) / "cc-cfp" / "config.json")
+    cfp = os.environ.get("CFP_CONFIG_DIR", "").strip()
+    if os.path.isabs(cfp):
+        files.add(Path(cfp) / "config.json")
+    return sorted(files)
+
+
+REAL_CONFIG_FILES = _real_config_files()
+
+
+def _snapshot(files):
+    state = {}
+    for path in files:
+        try:
+            state[str(path)] = path.read_bytes()
+        except FileNotFoundError:
+            state[str(path)] = None
+    return state
+
+
+@pytest.fixture(autouse=True)
+def _isolate_from_real_config(tmp_path_factory, monkeypatch):
+    """Every test runs with a scratch HOME and without the XDG/CFP path variables.
+
+    A test that still writes the real config.json (for example by setting HOME
+    or CFP_CONFIG_DIR back to real folders) fails at teardown.
+    """
+    before = _snapshot(REAL_CONFIG_FILES)
+    monkeypatch.setenv("HOME", str(tmp_path_factory.mktemp("isolated-home")))
+    for name in PATH_ENV_VARS:
+        monkeypatch.delenv(name, raising=False)
+    yield
+    changed = [path for path, data in _snapshot(REAL_CONFIG_FILES).items() if data != before[path]]
+    assert not changed, f"test changed the real user config: {', '.join(changed)}"
+
+
 @pytest.fixture
 def tmp_home(tmp_path, monkeypatch):
     """Isolated HOME so tests never touch the real config or data folders.

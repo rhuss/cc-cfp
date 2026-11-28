@@ -512,7 +512,7 @@ def test_seed_with_a_case_alias_in_the_store_is_never_compared_or_written(seeded
     assert again["seeded_profiles"] == [] and again["warnings"] == [expected]
 
 
-def test_update_refuses_a_symlinked_profiles_folder(tmp_path):
+def test_update_refuses_a_symlinked_profiles_folder(tmp_path, tmp_home):
     from cfplib import config
 
     real = tmp_path / "elsewhere"
