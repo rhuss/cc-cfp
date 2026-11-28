@@ -100,3 +100,12 @@ Ideas captured from code reviews for future brainstorming.
 - **Summary**: A draft with a passing review can be edited and then set ready after a clean pre-flight without a new review; intentional for the voice pass and shortening.
 
 > If a stricter model is wanted, mark-voice-pass could become the only sanctioned post-pass edit path and other edits would mark the review stale.
+
+### single-source-path-rules
+
+- **Source**: deep-review
+- **Date**: 2026-11-27
+- **Reference**: 002-xdg-config-store
+- **Summary**: The config folder, data folder, and store resolution rules are written out in about eight places (README, three guide pages, three docstrings, the skill preamble).
+
+> Copies already drifted once; making the guide's configuration page the single reference and linking to it elsewhere would keep rule changes to one edit.

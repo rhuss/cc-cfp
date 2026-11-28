@@ -10,6 +10,7 @@ have ``"ok": false, "error": ...`` and exit code 1; usage errors exit 2.
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -22,6 +23,7 @@ from cfplib import (  # noqa: E402
     counts,
     lifecycle,
     pasteview,
+    paths,
     preflight,
     profile,
     proposals,
@@ -100,6 +102,7 @@ def build_parser():
     p.add_argument("--review-rounds", type=int, default=None)
     p.add_argument("--default-profile", default=None)
     p.add_argument("--seed-dir", default=None)
+    p.add_argument("--user-seed-dir", default=None, help=argparse.SUPPRESS)
     p = sub(g, "set", cmd_config_set)
     p.add_argument("--key", required=True)
     p.add_argument("--value", required=True)
@@ -120,17 +123,19 @@ def build_parser():
     p.add_argument("--profile", required=True)
     p.add_argument("--event", default=None)
     p.add_argument("--revoke", action="store_true")
-    p = sub(g, "seed-status", cmd_profile_seed_status, "compare the shipped seed profiles with the store")
+    p = sub(g, "seed-status", cmd_profile_seed_status, "compare the shipped and personal seed profiles with the store")
     p.add_argument("--seed-dir", required=True)
-    p = sub(g, "seed-update", cmd_profile_seed_update, "replace an outdated store profile with the shipped seed")
+    p.add_argument("--user-seed-dir", default=None, help=argparse.SUPPRESS)
+    p = sub(g, "seed-update", cmd_profile_seed_update, "replace an outdated store profile with its seed")
     p.add_argument("--profile", required=True)
     p.add_argument("--seed-dir", required=True)
+    p.add_argument("--user-seed-dir", default=None, help=argparse.SUPPRESS)
     choice = p.add_mutually_exclusive_group()
     choice.add_argument(
         "--files", default=None,
-        help="comma-separated shipped files to take besides profile.md (paths as seed-status prints them)",
+        help="comma-separated seed files to take besides profile.md (paths as seed-status prints them)",
     )
-    choice.add_argument("--all", action="store_true", help="take every changed or missing shipped file")
+    choice.add_argument("--all", action="store_true", help="take every changed or missing seed file")
 
     # event
     g = group("event", "event overrides")
@@ -285,14 +290,52 @@ def ctx_today(args):
 
 
 def cmd_config_show(args):
-    store = config.resolve_store(getattr(args, "store", None))
-    exists = config.store_config_path(store).is_file()
+    store, source = paths.resolve_store(getattr(args, "store", None))
+    data_dir = paths.data_dir()  # an invalid CFP_DATA_DIR fails here, even when the store came from elsewhere
+    _, read_path = paths.read_config()
+    exists = paths.store_initialized(store)
     cfg = config.load_store_config(store) if exists else dict(config.DEFAULT_STORE_CONFIG)
-    return {"store": str(store), "exists": exists, "config": cfg}
+    return {
+        "store": str(store),
+        "store_source": source,
+        "exists": exists,
+        "config": cfg,
+        "config_file": str(read_path) if read_path else None,
+        "config_write_path": str(paths.config_file()),
+        "data_dir": str(data_dir),
+        "user_profiles_dir": str(paths.user_profiles_dir()),
+    }
+
+
+def _cfp_store_warning(store):
+    """Warn when CFP_STORE names another store than the one being saved.
+
+    Paths are compared after ``~`` expansion and resolution. A relative
+    CFP_STORE does not override anything; later commands without ``--store``
+    fail on it, so it gets its own warning.
+    """
+    raw = os.environ.get("CFP_STORE", "").strip()
+    if not raw:
+        return []
+    try:
+        if paths.env_store().resolve() == Path(store):
+            return []
+    except CfpError as error:
+        return [f"{error}; later commands without --store fail until CFP_STORE is fixed or unset"]
+    return [f"CFP_STORE is set to '{raw}' and overrides the saved store '{store}' in later sessions"]
+
+
+def user_seed_dir(args):
+    """The personal profiles folder: ``--user-seed-dir`` (tests) or ``<data folder>/profiles``."""
+    explicit = getattr(args, "user_seed_dir", None)
+    return Path(explicit) if explicit else paths.user_profiles_dir()
 
 
 def cmd_config_init(args):
-    store = getattr(args, "store", None) or config.resolve_store(None)
+    # Fail on an invalid CFP_DATA_DIR or CFP_CONFIG_DIR before anything is written.
+    user_profiles_dir = user_seed_dir(args)
+    paths.config_file()
+    store = config.resolve_store(getattr(args, "store", None))
     values = {
         "speaker_name": args.speaker_name,
         "speaker_company": args.speaker_company,
@@ -300,7 +343,10 @@ def cmd_config_init(args):
         "review_rounds": args.review_rounds,
         "default_profile": args.default_profile,
     }
-    return config.init_store(store, values, seed_dir=args.seed_dir)
+    result = config.init_store(store, values, seed_dir=args.seed_dir, user_seed_dir=user_profiles_dir)
+    result["warnings"] = result["warnings"] + _cfp_store_warning(Path(result["store"]))
+    result["user_profiles_dir"] = str(user_profiles_dir)
+    return result
 
 
 def cmd_config_set(args):
@@ -340,12 +386,17 @@ def cmd_profile_approve(args):
 
 
 def cmd_profile_seed_status(args):
-    return {"seeds": seeds.status(ctx_store(args), args.seed_dir)}
+    user_dir = user_seed_dir(args)
+    listing, warnings = seeds.status_report(ctx_store(args), args.seed_dir, user_dir)
+    return {"seeds": listing, "warnings": warnings}
 
 
 def cmd_profile_seed_update(args):
+    user_dir = user_seed_dir(args)
     files = [part.strip() for part in (args.files or "").split(",") if part.strip()]
-    return seeds.update(ctx_store(args), args.seed_dir, args.profile, files=files, all_files=args.all)
+    return seeds.update(
+        ctx_store(args), args.seed_dir, args.profile, files=files, all_files=args.all, user_dir=user_dir
+    )
 
 
 def cmd_event_write(args):

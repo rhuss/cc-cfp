@@ -48,9 +48,10 @@ The README lists the layout like this:
 ----
 
 `config init`, the CLI call behind `/cfp:init`, creates the store folder, the five folders `profiles`, `talks`, `proposals`, `bios`, and `resources`, and `config.md`.
-`cfp` finds the store through the user config `~/.config/cc-cfp/config.json`, which holds `{"store": path}`.
+`cfp` finds the store through the user config `config.json` in the config folder (by default `~/.config/cc-cfp/config.json`), which holds `{"store": path}`.
 `--store` on a CLI call and the `CFP_STORE` environment variable both take precedence over that file.
-xref:overview/install.adoc[Install and first run] covers that file and the variable.
+Without any of them, the store is `<data folder>/store`, by default `~/.local/share/cc-cfp/store`.
+xref:reference/config.adoc#store-resolution[Configuration] covers the file, the folders, and the variables.
 
 Several arrows in the diagram are plain ids in front matter.
 A proposal names its talk, its profile family, and its event.

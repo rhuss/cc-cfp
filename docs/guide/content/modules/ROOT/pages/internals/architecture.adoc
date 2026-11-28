@@ -5,7 +5,9 @@
 // cfp:.claude-plugin/marketplace.json:1-22
 // cfp:Makefile:3-4,7-9,11-22,24-30,32-47
 // cfp:cfp/hooks.json:1-16
-// cfp:cfp/hooks/scripts/context-hook.py:1-10,19-23,26-40,43-70
+// cfp:cfp/hooks/scripts/context-hook.py
+// cfp:cfp/scripts/cfplib/paths.py
+// cfp:specs/002-xdg-config-store/contracts/hook.md
 // cfp:cfp/commands/bio.md:1-6
 // cfp:cfp/commands/check.md:1-6
 // cfp:cfp/commands/draft.md:1-6
@@ -101,8 +103,10 @@ For a `/cfp:` prompt it collects four values:
 The plugin directory, computed from the script's own location.
 
 `store`::
-The `CFP_STORE` environment variable when it is set, else the `store` key in `~/.config/cc-cfp/config.json`.
-A missing or broken config file yields an empty value.
+The store as the store CLI resolves it without `--store`: the `CFP_STORE` environment variable when it is set, else the `store` key in `config.json` in the config folder, else the default `<data folder>/store`.
+The hook puts `<plugin-root>/scripts` on `sys.path` and imports `cfplib.paths`, the module the CLI uses too, so both always agree on the store.
+When resolution fails, for example because `CFP_STORE` holds a relative path, the value is empty and a fifth element, `store-error`, carries the message.
+The hook still succeeds, and the skill shows the error and stops.
 
 `store-initialized`::
 `true` when the store path is set and the store holds a `config.md` file, otherwise `false`.
@@ -118,14 +122,19 @@ The skills see a block in this shape:
 ----
 <cfp-context>
 <plugin-root>/path/to/installed/cfp</plugin-root>
-<store>/path/to/store or empty</store>
+<store>/path/to/store</store>
 <store-initialized>true|false</store-initialized>
+<store-error>only when the store could not be resolved</store-error>
 <today>2026-10-09</today>
 </cfp-context>
 ----
 
 The script's own documentation states that it never exits non-zero for a `/cfp:` prompt.
-A missing or broken user configuration yields an empty store path instead of an error.
+A missing or malformed config file simply leads to the default store.
+When resolution reaches an invalid `CFP_STORE`, `CFP_CONFIG_DIR`, or `CFP_DATA_DIR`, the store path is empty and `<store-error>` carries the message instead of a failed hook.
+Resolution stops at the first step that yields a store, so a valid `CFP_STORE` hides a broken `CFP_CONFIG_DIR` or `CFP_DATA_DIR`.
+A store whose `config.md` can't be accessed, for example because of folder permissions or a symlink loop, is reported the same way with a `cannot access` message.
+The values are XML-escaped, so a `&` in a path arrives as `&amp;`.
 
 == Command files
 

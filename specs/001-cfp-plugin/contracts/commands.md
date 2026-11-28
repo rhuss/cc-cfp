@@ -8,7 +8,7 @@ Interaction rules shared by all skills: one question at a time through AskUserQu
 
 **Arguments**: `[--store <path>]`
 
-**Asks**: store path (default `~/Obsidian/<detected vault>/Talks` when a vault is found, else `~/cfp-store`), speaker name, company, voice profile (lists profiles from the prose plugin if present, allows none), review rounds (default 3).
+**Asks**: store path (default `~/Obsidian/<detected vault>/Talks` when a vault is found, else `~/cfp-store`; Superseded by feature 002: the default store is `<data folder>/store` and the config folder follows XDG; see specs/002-xdg-config-store/spec.md), speaker name, company, voice profile (lists profiles from the prose plugin if present, allows none), review rounds (default 3).
 
 **Does**: `config init` with the plugin's seed directory. Reports which profiles were seeded and where the store is.
 
@@ -74,6 +74,8 @@ Interaction rules shared by all skills: one question at a time through AskUserQu
 **reopen**: starts `/cfp:draft --talk <talk of proposal>` for a new event with the old proposal's fields shown for reference.
 
 ## Hook: `<cfp-context>`
+
+> **Note**: Superseded by feature 002: `<store>` is never empty on success (the default store applies), and a resolution error adds `<store-error>`; see specs/002-xdg-config-store/contracts/hook.md.
 
 The UserPromptSubmit hook fires only for prompts starting with `/cfp:` and injects:
 

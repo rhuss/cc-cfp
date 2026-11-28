@@ -1,7 +1,10 @@
 = Configuration and proposal lifecycle
 
 // Sources:
-// cfp:cfp/scripts/cfplib/config.py:1-6,15-23,26-55,72-114,162-168
+// cfp:cfp/scripts/cfplib/config.py
+// cfp:cfp/scripts/cfplib/paths.py
+// cfp:cfp/scripts/cfplib/seeds.py
+// cfp:specs/002-xdg-config-store/contracts/paths.md
 // cfp:README.md:25,29,61
 // cfp:cfp/scripts/cfp_store.py:93-105,287-309
 // cfp:cfp/scripts/cfplib/preflight.py:157-175,178-181
@@ -12,8 +15,44 @@
 // cfp:cfp/scripts/cfplib/lifecycle.py:10-29,32-36,39-55,58-74,90-137,140-179
 // cfp:cfp/skills/status/SKILL.md:39-47,54-61
 
-This page lists cfp's two configuration files, the keys of the store's `config.md`, and the rules of the proposal lifecycle.
+This page lists cfp's two configuration files, the folders and environment variables that locate them, the keys of the store's `config.md`, and the rules of the proposal lifecycle.
 xref:overview/install.adoc[Install and first run] walks through the setup, and xref:user/status.adoc[Track a proposal's status] shows the lifecycle from the user's side.
+
+== Folders and environment variables
+
+`cfp` uses two folders outside the store.
+The store CLI and the context hook resolve both with the same rules.
+
+[cols="1,2,2"]
+|===
+|Folder |Location, first match wins |Holds
+
+|Config folder
+|`CFP_CONFIG_DIR`, then `$XDG_CONFIG_HOME/cc-cfp`, then `~/.config/cc-cfp`
+|`config.json`
+
+|Data folder
+|`CFP_DATA_DIR`, then `$XDG_DATA_HOME/cc-cfp`, then `~/.local/share/cc-cfp`
+|`profiles/` (personal profiles) and the default store `store/`
+|===
+
+[cols="1,3"]
+|===
+|Variable |Rule
+
+|`XDG_CONFIG_HOME`, `XDG_DATA_HOME`
+|Ignored when empty or not absolute, as the XDG Base Directory specification requires.
+
+|`CFP_CONFIG_DIR`, `CFP_DATA_DIR`, `CFP_STORE`
+|Unset when empty or only whitespace.
+A leading `~` is expanded.
+A value that is still relative is an error that names the variable, for example `CFP_DATA_DIR must be an absolute path, got 'data'`.
+|===
+
+Store resolution stops at the first step that yields a store, so a broken variable only matters to a command that reaches it.
+`--store` never reads `CFP_STORE`, `CFP_CONFIG_DIR`, or `CFP_DATA_DIR`, and a valid `CFP_STORE` never reads the config file or the data folder.
+`config show`, `config init`, `profile seed-status`, and `profile seed-update` always read the data folder, so they fail on a broken `CFP_DATA_DIR`.
+In a skill, a resolution error shows up as `<store-error>` in the context block, and the skill shows it and stops.
 
 == The user config file
 
@@ -22,19 +61,26 @@ xref:overview/install.adoc[Install and first run] walks through the setup, and x
 |Item |Value
 
 |Path
-|`~/.config/cc-cfp/config.json`
+|`config.json` in the config folder, by default `~/.config/cc-cfp/config.json`.
+
+|Legacy fallback
+|When `CFP_CONFIG_DIR` is not set and the config folder holds no `config.json`, cfp reads `~/.config/cc-cfp/config.json`.
+That is where earlier versions wrote it, so an existing setup keeps working after `XDG_CONFIG_HOME` is set.
+A file that exists in the config folder but is malformed never leads to the fallback.
 
 |Content
-|A JSON object with the key `store`, the absolute path of the store.
+|A JSON object with the key `store`, the path of the store.
+A leading `~` is expanded, and a relative path counts from the folder of the file.
 
 |Written by
-|`/cfp:init` and `config init`, on every setup run.
-The write keeps any other keys in the file and replaces `store`.
+|`/cfp:init` and `config init`, on every setup run, always to the config folder.
+The write keeps any other keys of the file that was read and replaces `store`.
 
-|Missing or malformed file
-|Read as an empty object, so the store must come from `--store` or `CFP_STORE`.
+|Missing or malformed file, or no `store` key
+|Read as an empty object, so the store comes from `--store`, `CFP_STORE`, or the default.
 |===
 
+[#store-resolution]
 == Store resolution
 
 The store CLI takes the first of these that is set:
@@ -46,6 +92,7 @@ The store CLI takes the first of these that is set:
 |1
 |`--store <path>`
 |Given on a store CLI call.
+A relative path counts from the current folder.
 
 |2
 |`CFP_STORE`
@@ -53,12 +100,31 @@ The store CLI takes the first of these that is set:
 It points a session at a second store without rewriting `config.json`, and the context hook honours it too.
 
 |3
-|`store` in `~/.config/cc-cfp/config.json`
+|`store` in `config.json`
 |Written by `/cfp:init`.
+
+|4
+|`<data folder>/store`
+|The default, `~/.local/share/cc-cfp/store` when no variable is set.
+`/cfp:init` proposes it and creates it when you accept it.
 |===
 
-With none of the three, the call fails with `no store configured`.
+`config show` reports which step won as `store_source`: `argument`, `environment`, `config`, or `default`.
 xref:overview/install.adoc[Install and first run] has a walkthrough for a second store with `CFP_STORE`.
+
+== Personal profiles
+
+`<data folder>/profiles/<id>/` holds conference profiles you keep yourself, in the format of the shipped ones.
+`config init`, `profile seed-status`, and `profile seed-update` read them as a second seed source next to the shipped profiles.
+A missing folder is an empty source; cfp never creates it.
+
+* A personal profile with the name of a shipped one replaces it, and each of these commands returns a warning that names both folders.
+* A folder whose name is not a valid profile id (letters, digits, `.`, `_`, `-`, starting with a letter or digit) is skipped with a warning.
+* `config init` skips a personal profile whose `profile.md` can't be read and returns a warning that names the file; `profile seed-status` reports it as `unreadable`.
+* The store copy is made of regular files: a symlinked `profile.md` or profile folder is copied by content, and symlinked `events/` or `examples/` folders and symlinked files in them are skipped.
+* `seed_version` is an ISO date (`YYYY-MM-DD`), compared as text.
+* A profile without `seed_version` is copied once; its store copy counts as `local` and is never offered an update.
+* A variant of a shipped profile replaces an existing store copy of the shipped profile only when its `seed_version` is later than the copy's.
 
 == The keys of config.md
 

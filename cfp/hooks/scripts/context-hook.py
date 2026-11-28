@@ -5,15 +5,27 @@ Reads the hook input JSON from stdin and, when the prompt starts with
 ``/cfp:``, emits an ``additionalContext`` block that tells the skills where
 the plugin lives, where the store is, and whether the store is initialized.
 
-The hook never exits non-zero for a ``/cfp:`` prompt: a missing or broken
-user configuration simply yields an empty store path.
+The store is resolved by ``cfplib.paths``, the same module the CLI uses, so
+the hook and ``cfp_store.py`` never disagree (``CFP_STORE``, the config file
+in ``CFP_CONFIG_DIR``, ``$XDG_CONFIG_HOME/cc-cfp`` or ``~/.config/cc-cfp``,
+then ``<data folder>/store``). The hook runs as ``python3 -I``, which ignores
+``PYTHONPATH``, so it puts ``<plugin root>/scripts`` on ``sys.path`` itself.
+
+The hook never exits non-zero for a ``/cfp:`` prompt. When resolution fails
+(for example a relative ``CFP_STORE``), ``<store>`` is empty, the store is
+reported as not initialized, and ``<store-error>`` carries the message. The
+same happens when the store resolves but its ``config.md`` cannot be
+accessed (for example folder permissions or a symlink loop).
 """
 
 import datetime
 import json
-import os
 import sys
 from pathlib import Path
+from xml.sax.saxutils import escape
+
+# hooks/scripts/context-hook.py -> hooks/scripts -> hooks -> plugin root
+PLUGIN_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 def read_hook_input():
@@ -24,20 +36,22 @@ def read_hook_input():
 
 
 def resolve_store():
-    """Return the store path from env CFP_STORE or the user config file."""
-    env_store = os.environ.get("CFP_STORE", "").strip()
-    if env_store:
-        return env_store
-    config_path = Path.home() / ".config" / "cc-cfp" / "config.json"
+    """Return ``(store path or "", initialized, error message or None)``.
+
+    Resolution and the initialized check both come from ``cfplib.paths``, so
+    the hook and the CLI agree on access errors too.
+    """
     try:
-        with open(config_path, "r", encoding="utf-8") as handle:
-            data = json.load(handle)
-    except (OSError, ValueError):
-        return ""
-    if not isinstance(data, dict):
-        return ""
-    store = data.get("store", "")
-    return store if isinstance(store, str) else ""
+        scripts = str(PLUGIN_ROOT / "scripts")
+        if scripts not in sys.path:
+            sys.path.insert(0, scripts)
+        from cfplib import paths
+
+        store, _source = paths.resolve_store(None)
+        return str(store), paths.store_initialized(store), None
+    except Exception as error:  # noqa: BLE001  the hook must never fail a /cfp: prompt
+        # <store> is empty whenever <store-error> is present
+        return "", False, str(error) or type(error).__name__
 
 
 def main():
@@ -46,24 +60,22 @@ def main():
     if not isinstance(prompt, str) or not prompt.startswith("/cfp:"):
         return 0
 
-    # hooks/scripts/context-hook.py -> hooks/scripts -> hooks -> plugin root
-    plugin_root = Path(__file__).resolve().parent.parent.parent
-    store = resolve_store()
-    initialized = bool(store) and (Path(store).expanduser() / "config.md").is_file()
+    store, initialized, error = resolve_store()
     today = datetime.date.today().isoformat()
 
-    context = (
-        "<cfp-context>\n"
-        f"<plugin-root>{plugin_root}</plugin-root>\n"
-        f"<store>{store}</store>\n"
-        f"<store-initialized>{'true' if initialized else 'false'}</store-initialized>\n"
-        f"<today>{today}</today>\n"
-        "</cfp-context>"
-    )
+    lines = [
+        "<cfp-context>",
+        f"<plugin-root>{escape(str(PLUGIN_ROOT))}</plugin-root>",
+        f"<store>{escape(store)}</store>",
+        f"<store-initialized>{'true' if initialized else 'false'}</store-initialized>",
+    ]
+    if error is not None:
+        lines.append(f"<store-error>{escape(error)}</store-error>")
+    lines += [f"<today>{today}</today>", "</cfp-context>"]
     response = {
         "hookSpecificOutput": {
             "hookEventName": "UserPromptSubmit",
-            "additionalContext": context,
+            "additionalContext": "\n".join(lines),
         }
     }
     print(json.dumps(response))

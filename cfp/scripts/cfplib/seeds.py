@@ -1,11 +1,15 @@
-"""Shipped seed profiles: compare them with the store copies and update outdated ones.
+"""Seed profiles: compare them with the store copies and update outdated ones.
+
+Seeds come from two sources: the profiles the plugin ships (``plugin``) and
+the user's personal profiles in ``<data folder>/profiles`` (``user``). A user
+profile with the same name as a shipped one replaces it, with a warning.
 
 ``config init`` copies a seed profile into a store once and never touches it
-again. A later plugin version can ship a newer seed, marked by a higher
-``seed_version`` in its ``profile.md``. ``status`` reports that with a diff
-per shipped file, and ``update`` replaces the files the user chose while
-keeping their approval flags. Files that exist only in the store (the user's
-own events, examples of accepted proposals) are never read or written here.
+again. A later version of a seed is marked by a higher ``seed_version`` in
+its ``profile.md``. ``status`` reports that with a diff per seed file, and
+``update`` replaces the files the user chose while keeping their approval
+flags. Files that exist only in the store (the user's own events, examples
+of accepted proposals) are never read or written here.
 """
 
 import difflib
@@ -17,20 +21,91 @@ PROFILE_FILE = "profile.md"
 SEED_SUBDIRS = ("events", "examples")
 # Besides profile.md, files under these directories carry an approval flag.
 APPROVED_PREFIXES = ("events/",)
+# Diff headers keep the "user/<file>" prefix that seed-status documents; messages use plain words.
+DIFF_LABELS = {"plugin": "shipped", "user": "user"}
+SOURCE_NAMES = {"plugin": "shipped", "user": "personal"}
+
+
+def _profile_folders(seed_dir):
+    return [entry for entry in sorted(Path(seed_dir).iterdir()) if entry.is_dir() and (entry / PROFILE_FILE).is_file()]
 
 
 def _seed_profiles(seed_dir):
     seed_dir = Path(seed_dir)
     if not seed_dir.is_dir():
         raise CfpError(f"seed directory not found: {seed_dir}")
-    return [entry for entry in sorted(seed_dir.iterdir()) if entry.is_dir() and (entry / PROFILE_FILE).is_file()]
+    return _profile_folders(seed_dir)
 
 
-def _seed_files(seed_profile_dir):
+def _has_seed_version(seed_profile_dir):
+    try:
+        meta, _ = frontmatter.load(seed_profile_dir / PROFILE_FILE)
+    except CfpError:
+        return True  # broken front matter is reported when the seed is used; no extra claim here
+    return bool(meta.get("seed_version"))
+
+
+def collect(plugin_dir, user_dir=None):
+    """Return ``(entries, warnings)`` for the seeds of both sources.
+
+    Entries are ``{"name", "dir", "source"}``: the plugin's seeds first (a
+    missing ``plugin_dir`` is an error; ``None`` means no plugin source), then
+    the user's own profiles. A user profile with the name of a shipped one
+    takes its place and adds one warning. A missing ``user_dir`` (or ``None``)
+    is an empty source. A user folder whose name differs from a shipped one
+    only in case is skipped with a warning on every file system, because on
+    APFS or NTFS both names are one store folder.
+    """
+    entries = []
+    if plugin_dir is not None:
+        entries = [{"name": entry.name, "dir": entry, "source": "plugin"} for entry in _seed_profiles(plugin_dir)]
+    warnings = []
+    if user_dir is not None and Path(user_dir).is_dir():
+        index = {entry["name"]: i for i, entry in enumerate(entries)}
+        folded = {entry["name"].lower(): entry["name"] for entry in entries}
+        try:
+            folders = _profile_folders(user_dir)
+        except OSError as error:
+            # The personal source is optional: report it and keep the shipped seeds.
+            warnings.append(f"personal profiles in {user_dir} skipped: {error.strerror or error}")
+            folders = []
+        for folder in folders:
+            try:
+                store.check_id(folder.name, "profile id")
+            except CfpError:
+                # The folder name becomes a store path and a skill's shell argument, so it must be a safe id.
+                warnings.append(
+                    f"profile folder '{folder.name}' in {user_dir} skipped: "
+                    "a profile name starts with a letter or digit and uses only letters, digits, '.', '_', and '-'"
+                )
+                continue
+            shipped_name = folded.get(folder.name.lower())
+            if shipped_name is not None and shipped_name != folder.name:
+                warnings.append(
+                    f"profile folder '{folder.name}' in {user_dir} skipped: it differs from the shipped profile "
+                    f"'{shipped_name}' only in case; rename it to '{shipped_name}' to replace the shipped profile"
+                )
+                continue
+            user_entry = {"name": folder.name, "dir": folder, "source": "user"}
+            if folder.name in index:
+                shipped = entries[index[folder.name]]["dir"]
+                warning = f"profile '{folder.name}': using {folder} instead of the shipped {shipped}"
+                if not _has_seed_version(folder):
+                    warning += "; it has no seed_version, so it will not replace an existing store copy"
+                warnings.append(warning)
+                entries[index[folder.name]] = user_entry
+            else:
+                entries.append(user_entry)
+    return entries, warnings
+
+
+def seed_files(seed_profile_dir):
     """Relative paths of the files a seed ships: profile.md, events/*.md, examples/*.md.
 
-    Symlinks are skipped, as in the initial copy, so a stray link in a seed
-    directory cannot pull foreign files into the store.
+    These are exactly the files ``config init`` copies. Symlinked event and
+    example files or folders are skipped, so a stray link in a seed directory
+    cannot pull foreign files into the store; ``profile.md`` is read through
+    a link. The store copy is always made of regular files.
     """
     files = [PROFILE_FILE]
     for sub in SEED_SUBDIRS:
@@ -54,26 +129,31 @@ def _canonical(path):
     return frontmatter.dump(meta, body)
 
 
-def _diff(store_text, seed_text, rel):
+def _diff(store_text, seed_text, rel, source="plugin"):
     lines = difflib.unified_diff(
         store_text.splitlines(),
         seed_text.splitlines(),
         fromfile=f"store/{rel}",
-        tofile=f"shipped/{rel}",
+        tofile=f"{DIFF_LABELS[source]}/{rel}",
         lineterm="",
         n=2,
     )
     return "\n".join(lines)
 
 
-def _file_states(seed_profile_dir, target_dir):
+def _file_states(seed_profile_dir, target_dir, source="plugin"):
     files = []
-    for rel in _seed_files(seed_profile_dir):
+    for rel in seed_files(seed_profile_dir):
         target = target_dir / rel
+        # Read the seed side first, so a broken seed file is never offered as a takeable "missing" file.
+        try:
+            seed_text = _canonical(seed_profile_dir / rel)
+        except CfpError as error:
+            files.append({"path": rel, "state": "unreadable", "error": str(error)})
+            continue
         if not target.is_file():
             files.append({"path": rel, "state": "missing"})
             continue
-        seed_text = _canonical(seed_profile_dir / rel)
         try:
             store_text = _canonical(target)
         except CfpError as error:
@@ -82,15 +162,22 @@ def _file_states(seed_profile_dir, target_dir):
         if store_text == seed_text:
             files.append({"path": rel, "state": "same"})
         else:
-            files.append({"path": rel, "state": "changed", "diff": _diff(store_text, seed_text, rel)})
+            files.append({"path": rel, "state": "changed", "diff": _diff(store_text, seed_text, rel, source)})
     return files
 
 
-def _profile_status(store_path, seed_profile_dir):
+def _profile_status(store_path, seed_profile_dir, source="plugin"):
     profile_id = seed_profile_dir.name
-    seed_meta, _ = frontmatter.load(seed_profile_dir / PROFILE_FILE)
+    info = {"profile": profile_id, "state": "", "store_version": None, "seed_version": None, "files": []}
+    try:
+        seed_meta, _ = frontmatter.load(seed_profile_dir / PROFILE_FILE)
+    except CfpError as error:
+        # A broken seed (typically a hand-written personal profile) must not hide the other seeds.
+        info["state"] = "unreadable"
+        info["error"] = str(error)
+        return info
     seed_version = str(seed_meta.get("seed_version") or "")
-    info = {"profile": profile_id, "state": "", "store_version": None, "seed_version": seed_version, "files": []}
+    info["seed_version"] = seed_version
     target_dir = store.profile_dir(store_path, profile_id)
     target = target_dir / PROFILE_FILE
     if not target.is_file():
@@ -110,22 +197,62 @@ def _profile_status(store_path, seed_profile_dir):
         info["state"] = "current"
     elif store_version < seed_version:  # ISO dates compare as strings
         info["state"] = "outdated"
-        info["files"] = _file_states(seed_profile_dir, target_dir)
+        info["files"] = _file_states(seed_profile_dir, target_dir, source)
     else:
-        info["state"] = "newer"  # the store was seeded by a later plugin version
+        info["state"] = "newer"  # the store copy came from a later seed than this one
     return info
 
 
-def status(store_path, seed_dir):
-    """One entry per shipped seed profile: its state in the store and, when outdated, its files.
+def _entry_status(store_path, entry):
+    info = _profile_status(store_path, entry["dir"], entry["source"])
+    info["source"] = entry["source"]
+    info["seed_dir"] = str(entry["dir"])
+    return info
+
+
+def alias_warning(entry, existing):
+    """The warning for a seed whose name differs from a store profile only in case (see store.case_alias)."""
+    return (
+        f"profile '{entry['name']}' from {entry['dir']} not used: the store already has '{existing}', "
+        "and profile names must differ in more than case; rename one of them"
+    )
+
+
+def _store_alias(store_path, entry):
+    return store.case_alias(Path(store_path) / "profiles", entry["name"])
+
+
+def status_report(store_path, seed_dir, user_dir=None):
+    """Return ``(status list, warnings)``; see ``status`` and ``collect``.
+
+    A seed whose store folder exists only under another case is left out with
+    a warning, so it is never compared with (or written into) another profile.
+    """
+    entries, warnings = collect(seed_dir, user_dir)
+    listing = []
+    for entry in entries:
+        existing = _store_alias(store_path, entry)
+        if existing is not None:
+            warnings.append(alias_warning(entry, existing))
+            continue
+        listing.append(_entry_status(store_path, entry))
+    return listing, warnings
+
+
+def status(store_path, seed_dir, user_dir=None):
+    """One entry per seed profile: its state in the store and, when outdated, its files.
+
+    A seed whose store folder exists only under another case is left out (see ``status_report``).
 
     States: ``missing`` (not in the store yet), ``current``, ``outdated``
-    (the shipped ``seed_version`` is higher), ``newer``, ``local`` (the store
+    (the seed's ``seed_version`` is higher), ``newer``, ``local`` (the store
     profile has no ``seed_version``), ``unreadable`` (broken front matter).
     File states of an outdated profile: ``same``, ``changed`` (with a unified
-    ``diff`` from the store copy to the shipped file), ``missing``.
+    ``diff`` from the store copy to the seed file), ``missing``,
+    ``unreadable`` (the seed file cannot be read; with an ``error``). Each entry
+    also names its ``source`` (``plugin`` or ``user``) and ``seed_dir``.
     """
-    return [_profile_status(store_path, entry) for entry in _seed_profiles(seed_dir)]
+    return status_report(store_path, seed_dir, user_dir)[0]
 
 
 def _stored_approval(path):
@@ -136,29 +263,39 @@ def _stored_approval(path):
     return bool(meta.get("approved", False))
 
 
-def update(store_path, seed_dir, profile_id, files=None, all_files=False):
-    """Replace an outdated store profile with the shipped seed.
+def update(store_path, seed_dir, profile_id, files=None, all_files=False, user_dir=None):
+    """Replace an outdated store profile with its seed (shipped or the user's own).
 
     ``profile.md`` is always replaced, because it carries the version. Other
-    shipped files that differ or are missing are taken only when named in
-    ``files`` or with ``all_files``. Replaced profile and event files keep
-    the approval flag of the store copy. Nothing is written when the call is
-    refused.
+    seed files that differ or are missing are taken only when named in
+    ``files`` or with ``all_files``; ``all_files`` leaves unreadable seed
+    files out, and naming one in ``files`` refuses the call. Replaced profile
+    and event files keep the approval flag of the store copy. Nothing is
+    written when the call is refused: an unknown or not outdated profile, a
+    store folder that exists only under another case, unreadable seed files
+    that were named, or a symlink in the store's ``profiles/`` folder, the
+    profile folder, its subfolders, or a file to be written.
     """
     profile_id = store.check_id(profile_id, "profile id")
-    if not Path(seed_dir).is_dir():
-        raise CfpError(f"seed directory not found: {seed_dir}")
-    seed_profile_dir = Path(seed_dir) / profile_id
-    if not (seed_profile_dir / PROFILE_FILE).is_file():
-        raise CfpError(f"no shipped profile '{profile_id}' in {seed_dir}")
-    info = _profile_status(store_path, seed_profile_dir)
+    entries, warnings = collect(seed_dir, user_dir)
+    entry = next((e for e in entries if e["name"] == profile_id), None)
+    if entry is None:
+        if user_dir is None:
+            raise CfpError(f"no shipped profile '{profile_id}' in {seed_dir}")
+        raise CfpError(f"no seed profile '{profile_id}' in {seed_dir} or {user_dir}")
+    existing = _store_alias(store_path, entry)
+    if existing is not None:
+        raise CfpError(alias_warning(entry, existing))
+    seed_profile_dir = entry["dir"]
+    info = _profile_status(store_path, seed_profile_dir, entry["source"])
     if info["state"] != "outdated":
         raise CfpError(f"profile '{profile_id}' is not outdated (state: {info['state']}); nothing to update")
 
-    states = {entry["path"]: entry["state"] for entry in info["files"]}
+    states = {item["path"]: item["state"] for item in info["files"]}
     open_files = [path for path, state in states.items() if path != PROFILE_FILE and state != "same"]
     if all_files:
-        chosen = set(open_files)
+        # "Everything" means every file that can be taken; unreadable seed files stay in "skipped".
+        chosen = {path for path in open_files if states[path] != "unreadable"}
     else:
         chosen = set()
         for rel in files or []:
@@ -167,14 +304,38 @@ def update(store_path, seed_dir, profile_id, files=None, all_files=False):
                 continue
             if rel not in states:
                 raise CfpError(
-                    f"'{rel}' is not a file of the shipped profile '{profile_id}'; shipped files: {', '.join(states)}"
+                    f"'{rel}' is not a file of the {SOURCE_NAMES[entry['source']]} profile '{profile_id}'; "
+                    f"seed files: {', '.join(states)}"
                 )
             chosen.add(rel)
 
     target_dir = store.profile_dir(store_path, profile_id)
+    writes = [PROFILE_FILE] + [path for path in open_files if path in chosen]
+    broken = [path for path in writes if states.get(path) == "unreadable"]
+    if broken:
+        raise CfpError(
+            f"seed files of profile '{profile_id}' cannot be read: {', '.join(broken)}; "
+            "fix them or leave them out of the update"
+        )
+    linked = [
+        str(path)
+        for path in [target_dir.parent, target_dir]
+        + [target_dir / sub for sub in SEED_SUBDIRS]
+        + [target_dir / rel for rel in writes]
+        if path.is_symlink()
+    ]
+    if linked:
+        # frontmatter.save writes through a link, which would change a file outside the store.
+        raise CfpError(
+            f"profile '{profile_id}' in the store contains symlinks ({', '.join(linked)}); "
+            "replace them with regular files before updating"
+        )
+    # Load every seed file before the first write, so a file that broke after the status check
+    # refuses the whole update instead of leaving it half applied.
+    loaded = {rel: frontmatter.load(seed_profile_dir / rel) for rel in writes}
     updated, added = [], []
-    for rel in [PROFILE_FILE] + [path for path in open_files if path in chosen]:
-        meta, body = frontmatter.load(seed_profile_dir / rel)
+    for rel in writes:
+        meta, body = loaded[rel]
         target = target_dir / rel
         existed = target.is_file()
         if existed and (rel == PROFILE_FILE or rel.startswith(APPROVED_PREFIXES)):
@@ -190,4 +351,6 @@ def update(store_path, seed_dir, profile_id, files=None, all_files=False):
         "updated": updated,
         "added": added,
         "skipped": [path for path in open_files if path not in chosen],
+        "source": entry["source"],
+        "warnings": warnings,
     }

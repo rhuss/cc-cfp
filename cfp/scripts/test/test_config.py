@@ -5,22 +5,60 @@ from pathlib import Path
 
 import pytest
 
-from cfplib import CfpError, config
+from cfplib import CfpError, config, paths
 from conftest import SEED_DIR
 
 
 def test_resolve_store_prefers_cli_then_env_then_user_config(tmp_home, monkeypatch, tmp_path):
     monkeypatch.delenv("CFP_STORE", raising=False)
-    with pytest.raises(CfpError):
-        config.resolve_store(None)
+    default = tmp_home / ".local" / "share" / "cc-cfp" / "store"
+    assert config.resolve_store(None) == default
+    assert paths.resolve_store(None) == (default, "default")
 
     config.write_user_config(tmp_path / "from-file")
     assert config.resolve_store(None) == (tmp_path / "from-file").resolve()
+    assert paths.resolve_store(None)[1] == "config"
 
     monkeypatch.setenv("CFP_STORE", str(tmp_path / "from-env"))
     assert config.resolve_store(None) == (tmp_path / "from-env").resolve()
+    assert paths.resolve_store(None)[1] == "environment"
 
     assert config.resolve_store(str(tmp_path / "from-cli")) == (tmp_path / "from-cli").resolve()
+    assert paths.resolve_store(str(tmp_path / "from-cli"))[1] == "argument"
+
+
+def test_user_config_writes_go_to_xdg_and_leave_legacy_untouched(tmp_home, monkeypatch, tmp_path):
+    legacy = tmp_home / ".config" / "cc-cfp" / "config.json"
+    legacy.parent.mkdir(parents=True)
+    legacy.write_text(json.dumps({"store": str(tmp_path / "old"), "keep": "me"}))
+    before = legacy.read_bytes()
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "cfg"))
+
+    assert paths.config_file() == tmp_path / "cfg" / "cc-cfp" / "config.json"
+    assert paths.read_config()[0]["store"] == str(tmp_path / "old")
+    assert config.resolve_store(None) == (tmp_path / "old").resolve()
+
+    written = config.write_user_config(tmp_path / "new")
+    assert written == tmp_path / "cfg" / "cc-cfp" / "config.json"
+    data = json.loads(written.read_text())
+    assert data == {"store": str((tmp_path / "new").resolve()), "keep": "me"}
+    assert legacy.read_bytes() == before
+    assert config.resolve_store(None) == (tmp_path / "new").resolve()
+
+
+def test_user_config_follows_cfp_config_dir(tmp_home, monkeypatch, tmp_path):
+    monkeypatch.setenv("CFP_CONFIG_DIR", str(tmp_path / "conf"))
+    written = config.write_user_config(tmp_path / "s")
+    assert written == tmp_path / "conf" / "config.json"
+    assert not (tmp_home / ".config").exists()
+
+
+def test_write_user_config_replaces_malformed_file(tmp_home, tmp_path):
+    path = tmp_home / ".config" / "cc-cfp" / "config.json"
+    path.parent.mkdir(parents=True)
+    path.write_text("not json")
+    config.write_user_config(tmp_path / "s")
+    assert json.loads(path.read_text()) == {"store": str((tmp_path / "s").resolve())}
 
 
 def test_user_config_lives_under_home(tmp_home, tmp_path):
@@ -28,15 +66,15 @@ def test_user_config_lives_under_home(tmp_home, tmp_path):
     path = tmp_home / ".config" / "cc-cfp" / "config.json"
     assert path.is_file()
     assert json.loads(path.read_text())["store"] == str((tmp_path / "s").resolve())
-    assert config.load_user_config() == {"store": str((tmp_path / "s").resolve())}
+    assert paths.read_config()[0] == {"store": str((tmp_path / "s").resolve())}
 
 
-def test_load_user_config_tolerates_missing_or_malformed(tmp_home):
-    assert config.load_user_config() == {}
+def test_read_config_tolerates_missing_or_malformed(tmp_home):
+    assert paths.read_config()[0] == {}
     path = tmp_home / ".config" / "cc-cfp" / "config.json"
     path.parent.mkdir(parents=True)
     path.write_text("not json")
-    assert config.load_user_config() == {}
+    assert paths.read_config()[0] == {}
 
 
 def test_init_store_creates_tree_config_and_seeds(tmp_store, tmp_home):
@@ -58,7 +96,7 @@ def test_init_store_creates_tree_config_and_seeds(tmp_store, tmp_home):
     assert store_config["voice_profile"] == ""
     assert store_config["default_profile"] == "kubecon"
 
-    assert config.load_user_config()["store"] == str(tmp_store.resolve())
+    assert paths.read_config()[0]["store"] == str(tmp_store.resolve())
 
     profile_file = tmp_store / "profiles" / "kubecon" / "profile.md"
     assert profile_file.is_file()
@@ -125,3 +163,209 @@ def test_require_store_checks_config_file(tmp_store, tmp_home):
         config.require_store(tmp_store)
     config.init_store(tmp_store, {"speaker_name": "A"}, seed_dir=None)
     assert config.require_store(tmp_store) == Path(tmp_store)
+
+
+def _user_seed(user_dir, name, version):
+    import shutil
+
+    from cfplib import frontmatter
+
+    target = user_dir / name
+    shutil.copytree(SEED_DIR / "kubecon", target)
+    meta, body = frontmatter.load(target / "profile.md")
+    meta["id"] = name
+    meta["approved"] = False
+    if version is None:
+        meta.pop("seed_version", None)
+    else:
+        meta["seed_version"] = version
+    frontmatter.save(target / "profile.md", meta, body)
+    return target
+
+
+def test_init_store_seeds_user_profiles(tmp_store, tmp_home, tmp_path):
+    from cfplib import frontmatter, seeds
+
+    user_dir = tmp_path / "profiles"
+    _user_seed(user_dir, "acme-summit", "2026-01-01")
+    _user_seed(user_dir, "kubecon", "2099-01-01")
+    _user_seed(user_dir, "no-version", None)
+    result = config.init_store(tmp_store, {"speaker_name": "A"}, seed_dir=SEED_DIR, user_seed_dir=user_dir)
+    assert result["seeded_profiles"] == ["kubecon", "acme-summit", "no-version"]
+    assert result["warnings"] == [
+        f"profile 'kubecon': using {user_dir / 'kubecon'} instead of the shipped {SEED_DIR / 'kubecon'}"
+    ]
+    for name in ("acme-summit", "kubecon", "no-version"):
+        assert frontmatter.load(tmp_store / "profiles" / name / "profile.md")[0]["approved"] is True
+    assert frontmatter.load(tmp_store / "profiles" / "kubecon" / "profile.md")[0]["seed_version"] == "2099-01-01"
+    states = {s["profile"]: s["state"] for s in seeds.status(tmp_store, SEED_DIR, user_dir)}
+    assert states == {"kubecon": "current", "acme-summit": "current", "no-version": "local"}
+
+
+def test_init_store_missing_user_dir_or_none_is_silent(tmp_store, tmp_home, tmp_path):
+    result = config.init_store(tmp_store, {"speaker_name": "A"}, seed_dir=SEED_DIR, user_seed_dir=tmp_path / "missing")
+    assert result["seeded_profiles"] == ["kubecon"] and result["warnings"] == []
+    assert not (tmp_path / "missing").exists()
+    result = config.init_store(tmp_store, {"speaker_name": "A"}, seed_dir=SEED_DIR)
+    assert result["seeded_profiles"] == [] and result["warnings"] == []
+
+
+def test_init_store_copies_symlinked_user_profile_as_regular_files(tmp_store, tmp_home, tmp_path):
+    from cfplib import frontmatter
+
+    real = _user_seed(tmp_path / "dotfiles", "acme", "2026-01-01")
+    source_text = (real / "profile.md").read_text(encoding="utf-8")
+    user_dir = tmp_path / "profiles"
+    (user_dir / "acme" / "events").mkdir(parents=True)
+    (user_dir / "acme" / "profile.md").symlink_to(real / "profile.md")
+    (user_dir / "acme" / "examples").symlink_to(real / "examples", target_is_directory=True)
+    (user_dir / "acme" / "events" / "linked.md").symlink_to(real / "events" / "kubecon-eu-2027.md")
+    (user_dir / "linked-folder").symlink_to(real, target_is_directory=True)
+
+    result = config.init_store(tmp_store, {"speaker_name": "A"}, seed_dir=SEED_DIR, user_seed_dir=user_dir)
+    assert result["seeded_profiles"] == ["kubecon", "acme", "linked-folder"]
+    profiles_mode = (tmp_store / "profiles").stat().st_mode & 0o777
+    assert (tmp_store / "profiles" / "acme").stat().st_mode & 0o777 == profiles_mode  # not mkdtemp's 0700
+    assert not list((tmp_store / "profiles").glob(".*"))
+    copied = tmp_store / "profiles" / "acme"
+    assert not (copied / "profile.md").is_symlink() and (copied / "profile.md").is_file()
+    assert not (copied / "examples").exists() and not (copied / "events" / "linked.md").exists()
+    assert frontmatter.load(copied / "profile.md")[0]["approved"] is True
+    folder_copy = tmp_store / "profiles" / "linked-folder"
+    assert not folder_copy.is_symlink() and (folder_copy / "events" / "kubecon-eu-2027.md").is_file()
+    assert (real / "profile.md").read_text(encoding="utf-8") == source_text
+
+
+def test_init_store_skips_user_folder_with_unsafe_name(tmp_store, tmp_home, tmp_path):
+    user_dir = tmp_path / "profiles"
+    _user_seed(user_dir, "bad name;x", "2026-01-01")
+    result = config.init_store(tmp_store, {"speaker_name": "A"}, seed_dir=SEED_DIR, user_seed_dir=user_dir)
+    assert result["seeded_profiles"] == ["kubecon"]
+    assert len(result["warnings"]) == 1 and result["warnings"][0].startswith(
+        f"profile folder 'bad name;x' in {user_dir} skipped:"
+    )
+    assert not (tmp_store / "profiles" / "bad name;x").exists()
+    assert config.load_store_config(tmp_store)["default_profile"] == "kubecon"
+
+
+def test_init_store_skips_broken_user_profile_without_partial_copy(tmp_store, tmp_home, tmp_path):
+    from cfplib import seeds
+
+    user_dir = tmp_path / "profiles"
+    broken = _user_seed(user_dir, "acme", "2026-01-01")
+    good_text = (broken / "profile.md").read_bytes()
+    (broken / "profile.md").write_bytes(b"\xff\xfe not utf-8")
+    _user_seed(user_dir, "zeta", "2026-01-01")
+
+    result = config.init_store(tmp_store, {"speaker_name": "A"}, seed_dir=SEED_DIR, user_seed_dir=user_dir)
+    assert result["seeded_profiles"] == ["kubecon", "zeta"]
+    assert len(result["warnings"]) == 1
+    assert result["warnings"][0].startswith(f"profile 'acme' from {broken} skipped:")
+    assert str(broken / "profile.md") in result["warnings"][0]
+    assert not (tmp_store / "profiles" / "acme").exists()
+    assert not list((tmp_store / "profiles").glob(".*"))
+    assert paths.read_config()[0]["store"] == str(tmp_store.resolve())
+
+    listing = {s["profile"]: s for s in seeds.status(tmp_store, SEED_DIR, user_dir)}
+    assert listing["acme"]["state"] == "unreadable" and str(broken / "profile.md") in listing["acme"]["error"]
+    assert listing["kubecon"]["state"] == "current" and listing["zeta"]["state"] == "current"
+
+    (broken / "profile.md").write_bytes(good_text)
+    again = config.init_store(tmp_store, {"speaker_name": "A"}, seed_dir=SEED_DIR, user_seed_dir=user_dir)
+    assert again["seeded_profiles"] == ["acme"] and again["warnings"] == []
+
+
+def test_broken_shipped_seed_still_fails_without_partial_copy(tmp_store, tmp_home, tmp_path):
+    plugin_dir = tmp_path / "plugin"
+    shipped = _user_seed(plugin_dir, "kubecon", "2026-01-01")
+    (shipped / "profile.md").write_bytes(b"\xff\xfe not utf-8")
+    with pytest.raises(CfpError):
+        config.init_store(tmp_store, {"speaker_name": "A"}, seed_dir=plugin_dir)
+    assert not list((tmp_store / "profiles").iterdir())
+
+
+def test_init_store_skips_broken_personal_profile_that_replaces_shipped_one(tmp_store, tmp_home, tmp_path):
+    """Chosen behavior: the personal profile still wins, so the shipped copy is not used as a fallback.
+
+    Seeding the shipped copy would block the fixed personal profile later, since init never replaces a
+    store profile. The user fixes the file and runs init again, which then copies the personal profile.
+    """
+    user_dir = tmp_path / "profiles"
+    broken = _user_seed(user_dir, "kubecon", "2026-01-01")
+    good_text = (broken / "profile.md").read_bytes()
+    (broken / "profile.md").write_bytes(b"\xff\xfe not utf-8")
+
+    result = config.init_store(tmp_store, {"speaker_name": "A"}, seed_dir=SEED_DIR, user_seed_dir=user_dir)
+    assert result["seeded_profiles"] == []
+    assert result["warnings"][0] == f"profile 'kubecon': using {broken} instead of the shipped {SEED_DIR / 'kubecon'}"
+    assert result["warnings"][1].startswith(f"profile 'kubecon' from {broken} skipped:")
+    assert len(result["warnings"]) == 2
+    assert not (tmp_store / "profiles" / "kubecon").exists()
+    assert config.load_store_config(tmp_store)["default_profile"] == ""
+
+    (broken / "profile.md").write_bytes(good_text)
+    again = config.init_store(tmp_store, {"speaker_name": "A"}, seed_dir=SEED_DIR, user_seed_dir=user_dir)
+    assert again["seeded_profiles"] == ["kubecon"]
+    assert config.load_store_config(tmp_store)["default_profile"] == "kubecon"
+
+
+def test_write_user_config_is_atomic(tmp_home, tmp_path, monkeypatch):
+    import os
+
+    path = config.write_user_config(tmp_path / "first")
+    before = path.read_bytes()
+
+    def fail(src, dst):
+        raise OSError(28, "No space left on device")
+
+    monkeypatch.setattr(os, "replace", fail)
+    with pytest.raises(OSError):
+        config.write_user_config(tmp_path / "second")
+    assert path.read_bytes() == before
+    assert [p.name for p in path.parent.iterdir()] == ["config.json"]
+
+
+def test_seed_profile_yields_to_a_concurrent_init(tmp_path):
+    target = tmp_path / "profiles" / "kubecon"
+    target.mkdir(parents=True)
+    (target / "profile.md").write_text("from the other init", encoding="utf-8")
+    assert config._seed_profile(SEED_DIR / "kubecon", target) is False
+    assert (target / "profile.md").read_text(encoding="utf-8") == "from the other init"
+    assert [p.name for p in target.parent.iterdir()] == ["kubecon"]
+
+
+def test_require_store_reports_access_errors(tmp_store, tmp_home, monkeypatch):
+    import os
+
+    config.init_store(tmp_store, {"speaker_name": "A"}, seed_dir=None)
+
+    def denied(path):
+        raise PermissionError(13, "Permission denied")
+
+    monkeypatch.setattr(paths, "os", type("FakeOs", (), {"stat": staticmethod(denied), "__getattr__": lambda self, name: getattr(os, name)})())
+    with pytest.raises(CfpError) as info:
+        config.require_store(tmp_store)
+    assert str(info.value) == f"cannot access {tmp_store / 'config.md'}: Permission denied"
+
+
+def test_init_store_skips_case_only_variant_of_a_shipped_profile(tmp_store, tmp_home, tmp_path):
+    user_dir = tmp_path / "profiles"
+    _user_seed(user_dir, "KubeCon", "2026-01-01")
+    result = config.init_store(tmp_store, {"speaker_name": "A"}, seed_dir=SEED_DIR, user_seed_dir=user_dir)
+    assert result["seeded_profiles"] == ["kubecon"]
+    assert len(result["warnings"]) == 1 and result["warnings"][0].startswith(
+        f"profile folder 'KubeCon' in {user_dir} skipped: it differs from the shipped profile 'kubecon' only in case"
+    )
+
+
+def test_write_user_config_keeps_a_symlinked_config_file(tmp_home, tmp_path, monkeypatch):
+    dots = tmp_path / "dots" / "config.json"
+    dots.parent.mkdir()
+    dots.write_text(json.dumps({"store": "/old", "keep": "me"}))
+    monkeypatch.setenv("CFP_CONFIG_DIR", str(tmp_path / "cfg"))
+    link = tmp_path / "cfg" / "config.json"
+    link.parent.mkdir()
+    link.symlink_to(dots)
+    assert config.write_user_config(tmp_path / "new") == link
+    assert link.is_symlink()
+    assert json.loads(dots.read_text()) == {"store": str((tmp_path / "new").resolve()), "keep": "me"}

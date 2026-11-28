@@ -6,7 +6,7 @@
 
 ## Summary
 
-Build the `cfp` Claude Code plugin: six slash commands (`/cfp:init`, `/cfp:profile`, `/cfp:bio`, `/cfp:draft`, `/cfp:check`, `/cfp:status`) backed by skills that run the interactive flows, a small set of stdlib-only Python scripts for the deterministic parts (store access, front matter, character counts, rule evaluation, paste view, status transitions), a knowledge base holding the shipped KubeCon profile, and a context hook that injects the plugin root and store path. All user data lives as markdown with YAML front matter in a configurable Obsidian vault folder. Drafting is talk-centric: a talk file holds the story, a proposal file holds the per-field rendering for one event, and the committee review runs in a fresh subagent that only sees the rubric and the draft.
+Build the `cfp` Claude Code plugin: six slash commands (`/cfp:init`, `/cfp:profile`, `/cfp:bio`, `/cfp:draft`, `/cfp:check`, `/cfp:status`) backed by skills that run the interactive flows, a small set of stdlib-only Python scripts for the deterministic parts (store access, front matter, character counts, rule evaluation, paste view, status transitions), a knowledge base holding the shipped KubeCon profile, and a context hook that injects the plugin root and store path. All user data lives as markdown with YAML front matter in a configurable Obsidian vault folder (Superseded by feature 002: the default store is `<data folder>/store` and the config folder follows XDG; see specs/002-xdg-config-store/spec.md). Drafting is talk-centric: a talk file holds the story, a proposal file holds the per-field rendering for one event, and the committee review runs in a fresh subagent that only sees the rubric and the draft.
 
 ## Technical Context
 
@@ -14,7 +14,7 @@ Build the `cfp` Claude Code plugin: six slash commands (`/cfp:init`, `/cfp:profi
 
 **Primary Dependencies**: Claude Code plugin system (commands, skills, hooks, Skill and Agent tools, AskUserQuestion, WebSearch, WebFetch, image Read); optional `prose` plugin (`prose:humanizer` skill) for the voice pass
 
-**Storage**: Markdown files with YAML front matter in `<store>` (default `~/Obsidian/<vault>/Talks`, configured at first use); user-level config in `~/.config/cc-cfp/config.json`
+**Storage**: Markdown files with YAML front matter in `<store>` (default `~/Obsidian/<vault>/Talks`, configured at first use); user-level config in `~/.config/cc-cfp/config.json`. Superseded by feature 002: the default store is `<data folder>/store` and the config folder follows XDG; see specs/002-xdg-config-store/spec.md.
 
 **Testing**: pytest for scripts (dev-only dependency installed with `uv` into `~/.venvs/cc-cfp`); `claude plugin validate` for manifests; hook smoke test via Makefile; quickstart scenarios run manually in a Claude Code session
 
@@ -147,7 +147,7 @@ cc-cfp/
 
 ## Phase 0: Research Summary
 
-See [research.md](research.md). Decisions: stdlib-only scripts invoked with `python3 -I`; YAML front matter handled by a minimal parser supporting scalars, lists, and one level of nested maps (enough for every schema in data-model.md); committee review in a fresh subagent with JSON output; voice pass through `prose:humanizer` with an inline fallback; profile research with WebSearch, WebFetch, and image Read; seed profile copied into the store at init so user edits never touch the plugin; store default inside the Obsidian vault.
+See [research.md](research.md). Decisions: stdlib-only scripts invoked with `python3 -I`; YAML front matter handled by a minimal parser supporting scalars, lists, and one level of nested maps (enough for every schema in data-model.md); committee review in a fresh subagent with JSON output; voice pass through `prose:humanizer` with an inline fallback; profile research with WebSearch, WebFetch, and image Read; seed profile copied into the store at init so user edits never touch the plugin; store default inside the Obsidian vault (Superseded by feature 002: the default store is `<data folder>/store` and the config folder follows XDG; see specs/002-xdg-config-store/spec.md).
 
 ## Phase 1: Design Summary
 

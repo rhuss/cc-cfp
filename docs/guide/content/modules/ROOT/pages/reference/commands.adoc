@@ -53,9 +53,19 @@ On later runs, it handles the update of a shipped profile that a newer plugin ve
 |Uses this store path without asking.
 
 |no argument, new store
-|Proposes `~/Obsidian/<vault>/Talks` for an Obsidian vault (one choice per vault when there are several).
-Without `~/Obsidian`, it proposes `~/cfp-store`.
+|Proposes the store that cfp resolves without `--store`, as an absolute path and as the first, recommended choice: `CFP_STORE` when set, else the store in the config file, else `<data folder>/store` (by default `~/.local/share/cc-cfp/store`).
+An Obsidian vault is never the default.
+When `~/Obsidian/<vault>` folders exist, the `Talks` folders of up to three vaults, sorted by name, are further choices.
 "Other" takes a path as free text.
+The config folder is `CFP_CONFIG_DIR`, else `$XDG_CONFIG_HOME/cc-cfp`, else `~/.config/cc-cfp`, and setup writes the store path to `config.json` there.
+The data folder is `CFP_DATA_DIR`, else `$XDG_DATA_HOME/cc-cfp`, else `~/.local/share/cc-cfp`.
+xref:reference/config.adoc#store-resolution[Configuration] lists the resolution order and both folders.
+
+|personal profiles
+|Setup also copies each profile folder in `<data folder>/profiles/` that holds a `profile.md` into the store, next to the shipped profiles, and the update check compares the store copy with it.
+A personal profile with the name of a shipped one replaces it, and cfp shows a warning once per run.
+cfp never creates `<data folder>/profiles/`; create it and add a folder per conference in the format of the shipped profile.
+xref:overview/install.adoc#where-cfp-keeps-its-files[Where cfp keeps its files] lists the `seed_version` rules.
 
 |`keep it as it is`
 |On an initialized store: no setting changes; goes on to the check of the shipped profiles.

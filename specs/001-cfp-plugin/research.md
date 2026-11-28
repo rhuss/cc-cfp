@@ -47,6 +47,8 @@ Each entry records a decision, the rationale, and the alternatives considered. D
 
 User-level config at `~/.config/cc-cfp/config.json` holds only `{"store": "<absolute path>"}` (and the override env var `CFP_STORE` for tests).
 
+> **Note**: Superseded by feature 002: the default store is `<data folder>/store` and the config folder follows XDG; see specs/002-xdg-config-store/spec.md.
+
 **Rationale**: One folder per entity type keeps Obsidian navigation and search obvious. The proposal name encodes event and talk so the file list reads as a submission log. The store path must live outside the store (chicken and egg), everything else travels with the data, which the spec requires (FR-002a).
 
 **Alternatives considered**: One big index file: rejected, conflicts with hand editing and Obsidian linking. Proposals nested under talks: rejected, the per-event listing (pre-flight, status view) is the more common access path.

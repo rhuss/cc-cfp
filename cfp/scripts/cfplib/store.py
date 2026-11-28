@@ -1,5 +1,6 @@
 """Store paths, slugs, and generic file access."""
 
+import os
 import re
 import unicodedata
 from pathlib import Path
@@ -34,9 +35,26 @@ def slugify(text, existing=None):
     return candidate
 
 
+def case_alias(directory, name):
+    """The entry of ``directory`` that differs from ``name`` only in case, else None.
+
+    Profile names are case-insensitive on every file system (like
+    ``existing_ids``): on APFS or NTFS both spellings are one folder, and on a
+    case-sensitive file system two such profiles would behave differently per
+    platform. None when the exact name exists or the folder cannot be listed.
+    """
+    try:
+        names = os.listdir(directory)
+    except OSError:
+        return None
+    if name in names:
+        return None
+    return next((entry for entry in names if entry.lower() == name.lower()), None)
+
+
 def check_id(value, what="id"):
     value = str(value or "")
-    if not _SAFE_ID.match(value) or ".." in value:
+    if not _SAFE_ID.fullmatch(value) or ".." in value:
         raise CfpError(f"invalid {what}: {value!r} (use letters, digits, hyphens)")
     return value
 
@@ -138,4 +156,5 @@ def list_profile_ids(store):
     directory = Path(store) / "profiles"
     if not directory.is_dir():
         return []
-    return sorted(p.name for p in directory.iterdir() if (p / "profile.md").is_file())
+    # Hidden folders (for example a ``.<id>.seeding`` left by a killed init) are not profiles.
+    return sorted(p.name for p in directory.iterdir() if not p.name.startswith(".") and (p / "profile.md").is_file())

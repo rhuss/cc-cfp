@@ -20,12 +20,63 @@ if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
 
+PATH_ENV_VARS = ("XDG_CONFIG_HOME", "XDG_DATA_HOME", "CFP_CONFIG_DIR", "CFP_DATA_DIR", "CFP_STORE")
+
+
+def _real_config_files():
+    """The developer's real config.json candidates, taken before any test changes the environment."""
+    home = Path(os.path.expanduser("~"))
+    files = {home / ".config" / "cc-cfp" / "config.json"}
+    xdg = os.environ.get("XDG_CONFIG_HOME", "").strip()
+    if os.path.isabs(xdg):
+        files.add(Path(xdg) / "cc-cfp" / "config.json")
+    cfp = os.environ.get("CFP_CONFIG_DIR", "").strip()
+    if os.path.isabs(cfp):
+        files.add(Path(cfp) / "config.json")
+    return sorted(files)
+
+
+REAL_CONFIG_FILES = _real_config_files()
+
+
+def _snapshot(files):
+    state = {}
+    for path in files:
+        try:
+            state[str(path)] = path.read_bytes()
+        except FileNotFoundError:
+            state[str(path)] = None
+    return state
+
+
+@pytest.fixture(autouse=True)
+def _isolate_from_real_config(tmp_path_factory, monkeypatch):
+    """Every test runs with a scratch HOME and without the XDG/CFP path variables.
+
+    A test that still writes the real config.json (for example by setting HOME
+    or CFP_CONFIG_DIR back to real folders) fails at teardown.
+    """
+    before = _snapshot(REAL_CONFIG_FILES)
+    monkeypatch.setenv("HOME", str(tmp_path_factory.mktemp("isolated-home")))
+    for name in PATH_ENV_VARS:
+        monkeypatch.delenv(name, raising=False)
+    yield
+    changed = [path for path, data in _snapshot(REAL_CONFIG_FILES).items() if data != before[path]]
+    assert not changed, f"test changed the real user config: {', '.join(changed)}"
+
+
 @pytest.fixture
 def tmp_home(tmp_path, monkeypatch):
-    """Isolated HOME so tests never touch the real ~/.config/cc-cfp."""
+    """Isolated HOME so tests never touch the real config or data folders.
+
+    The XDG and CFP path variables of the developer's environment are removed
+    as well, so they cannot redirect a test to real folders.
+    """
     home = tmp_path / "home"
     home.mkdir()
     monkeypatch.setenv("HOME", str(home))
+    for name in PATH_ENV_VARS:
+        monkeypatch.delenv(name, raising=False)
     return home
 
 
@@ -78,13 +129,17 @@ def run_cli(tmp_store):
     """Invoke cfp_store.py in a subprocess with python3 -I and parse JSON stdout."""
 
     def _run(*args, expect_ok=True, today=TODAY, env=None):
+        """``env`` entries override the environment; a ``None`` value removes the variable."""
         cmd = [sys.executable, "-I", str(CLI)]
         if today:
             cmd += ["--today", today]
         cmd += [str(a) for a in args]
         run_env = dict(os.environ)
-        if env:
-            run_env.update(env)
+        for name, value in (env or {}).items():
+            if value is None:
+                run_env.pop(name, None)
+            else:
+                run_env[name] = str(value)
         completed = subprocess.run(cmd, capture_output=True, text=True, env=run_env)
         result = CliResult(completed)
         if expect_ok:

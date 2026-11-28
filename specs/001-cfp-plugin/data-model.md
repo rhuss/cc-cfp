@@ -24,6 +24,8 @@ Talk ──> Outing (0..n, embedded)
 
 Location: `~/.config/cc-cfp/config.json` (override with env `CFP_STORE` for tests and scripts).
 
+> **Note**: Superseded by feature 002: the default store is `<data folder>/store` and the config folder follows XDG; see specs/002-xdg-config-store/spec.md.
+
 | Field | Type | Rules |
 |---|---|---|
 | store | string (absolute path) | Required. Created on init if missing. |

@@ -15,16 +15,16 @@ If `$ARGUMENTS` contains `--store <path>`, use it without asking.
 
 If `<store-initialized>` is already `true`, show the current store path from `<store>` and ask (AskUserQuestion) one of:
 
-- `keep it as it is`: no setting changes. Skip Steps 2 to 5 and continue with Step 6, which checks the shipped profiles.
+- `keep it as it is`: no setting changes. Run `python3 -I "$PLUGIN_ROOT/scripts/cfp_store.py" config show --store "<store path>"` and keep `config_write_path` and `user_profiles_dir` for Step 7. Skip Steps 2 to 5 and continue with Step 6, which checks the seed profiles (shipped and personal).
 - `re-run setup on it`: Steps 2 to 5 update the values; all data is kept.
 - `use a different path`: ask for the path, then continue with Step 2.
 
 Otherwise pick a default:
 
-- Use Glob on `~/Obsidian/*` (directories). If exactly one vault exists, default to `~/Obsidian/<vault>/Talks`. If several exist, offer each `~/Obsidian/<vault>/Talks` as a choice plus "Other".
-- If `~/Obsidian` does not exist, default to `~/cfp-store`.
+- Run `python3 -I "$PLUGIN_ROOT/scripts/cfp_store.py" config show` and take `store` from the result. It is an absolute path: `CFP_STORE` when set, else the `store` entry of the config file, else the neutral default `<data folder>/store` (for example `~/.local/share/cc-cfp/store`). On `"ok": false`, show the error (it names the environment variable to fix) and stop.
+- Use Glob on `~/Obsidian/*` (directories). For up to three vaults, sorted by name, add `~/Obsidian/<vault>/Talks` as further choices. Never make a vault the default; further vaults can be typed into the free-text option.
 
-Ask (AskUserQuestion): "Where should the store live?" with the default and "Other" (free text). Expand `~`.
+Ask (AskUserQuestion): "Where should the store live?" with the default first, marked as recommended and shown as the full absolute path, then the vault choices. Do not list an "Other" option: the question tool adds a free-text option itself, and it allows at most four options. When no vault exists, add `choose another folder` as the second option and, when picked, ask for the path in free text. Expand `~`.
 
 ## Step 2: Speaker name and company
 
@@ -51,30 +51,43 @@ python3 -I "$PLUGIN_ROOT/scripts/cfp_store.py" config init \
   --review-rounds <n> --seed-dir "$PLUGIN_ROOT/knowledge-base/profiles"
 ```
 
-Omit `--speaker-company` and `--voice-profile` when empty. The command creates `profiles/`, `talks/`, `proposals/`, `bios/`, `resources/`, writes `<store>/config.md`, writes `~/.config/cc-cfp/config.json`, and copies every seed profile that is not already in the store (seeded profiles are marked approved so drafting works immediately). It never overwrites a profile that is already there; Step 6 handles those.
+Omit `--speaker-company` and `--voice-profile` when empty. The command creates the store folder (with missing parents), `profiles/`, `talks/`, `proposals/`, `bios/`, `resources/`, writes `<store>/config.md`, saves the store path in the config file named by `config_write_path` in the result, and copies every seed profile that is not already in the store (seeded profiles are marked approved so drafting works immediately). Seeds come from the shipped profiles and from the user's personal profiles in `user_profiles_dir`; the command finds that folder itself, and a missing folder is fine. It never overwrites a profile that is already there; Step 6 handles those.
+
+Keep the `warnings` of the result for this run and show each one once. These kinds can appear:
+
+- `CFP_STORE is set to ... and overrides the saved store ...`: tell the user to remove or change the variable if the chosen path should win.
+- `CFP_STORE must be an absolute path, ...`: the variable is broken; tell the user to fix or unset it, because later commands fail until then.
+- `profile '<name>': using <user folder> instead of the shipped <plugin folder>`: a personal profile replaces the shipped one of the same name. Step 6 reports the same clash again; show it only once per run (de-duplicate by profile name).
+- `profile folder '<name>' in <user folder> skipped: ...`: the folder name is not usable (not a valid profile id, or it differs from a shipped profile only in case); tell the user to rename the folder as the message says.
+- `profile '<name>' from <user folder> skipped: ...`: the personal profile could not be read (the message names the file); tell the user to fix it and run `/cfp:init` again, which then copies it.
+- `profile '<name>' from <folder> not used: the store already has '<existing>', ...`: profile names are case-insensitive, so the seed is never copied, compared or updated; tell the user to rename one of them so the names differ in more than case.
 
 On `"ok": false`, show the error and ask whether to try a different path.
 
-## Step 6: Shipped profile updates
+## Step 6: Seed profile updates
 
-The store keeps its own copy of every shipped profile. After a plugin update the shipped profile can be newer than that copy. Check it on every run, also when Step 1 kept the store as it is:
+The store keeps its own copy of every seed profile, shipped or personal. After a plugin update the shipped profile can be newer than that copy, and the user can raise the `seed_version` of a personal profile. Check it on every run, also when Step 1 kept the store as it is:
 
 ```bash
 python3 -I "$PLUGIN_ROOT/scripts/cfp_store.py" profile seed-status \
   --store "<store path>" --seed-dir "$PLUGIN_ROOT/knowledge-base/profiles"
 ```
 
-`seeds` has one entry per shipped profile with `profile`, `state`, `store_version`, `seed_version`, and `files`. Act on `state`:
+The result has `seeds` and `warnings`. Show each entry of `warnings` that Step 5 did not show already in this run (de-duplicate by profile name), so every clash appears exactly once.
 
-- `current`, `missing`, `local`: nothing to do and nothing to say. (`missing` is copied by Step 5; `local` means the store profile has no `seed_version`, so it was researched or written by hand and is never replaced.)
-- `newer`: say in one line that the store's `<profile>` profile comes from a newer plugin version than the installed one.
+`seeds` has one entry per seed profile with `profile`, `state`, `store_version`, `seed_version`, `files`, `source` (`plugin` for a shipped profile, `user` for a personal one), and `seed_dir` (the folder it was read from). Act on `state`:
+
+- `missing`: nothing to do when Step 5 ran in this run (it copies missing profiles). When Step 5 did not run (the user chose `keep it as it is`), say that the `<profile>` profile from `seed_dir` is not in the store yet and that `re-run setup on it` copies it, for example after a skipped personal profile was fixed.
+- `current`, `local`: nothing to do and nothing to say. (`local` means the store profile has no `seed_version`, so it was researched or written by hand, or seeded from a personal profile without `seed_version`, and is never replaced.)
+- `newer` with `source: plugin`: say in one line that the store's `<profile>` profile comes from a newer plugin version than the installed one.
+- `newer` with `source: user`: say in one line that the store copy's `seed_version` is higher than your profile's, so there is nothing to update.
 - `unreadable`: show the `error` once.
 - `outdated`: offer the update below, one profile at a time.
 
 For an outdated profile:
 
-1. Say that the shipped `<profile>` profile is newer than the copy in the store, with both versions (`store_version` to `seed_version`).
-2. For every entry in `files` with the state `changed`, print its path and then its `diff` in full in a fenced `diff` block. Explain once how to read it: lines starting with `-` are in the store now and would be replaced, lines starting with `+` come with the shipped file. Then list the files with the state `missing` (shipped files the store does not have). Files with the state `same` need nothing.
+1. Say which seed is newer than the copy in the store, with both versions (`store_version` to `seed_version`): "the shipped `<profile>` profile" for `source: plugin`, "your personal `<profile>` profile in `<seed_dir>`" for `source: user`.
+2. For every entry in `files` with the state `changed`, print its path and then its `diff` in full in a fenced `diff` block. Explain once how to read it: lines starting with `-` are in the store now and would be replaced, lines starting with `+` come with the seed file (labeled `shipped/` or `user/`). Then list the files with the state `missing` (seed files, shipped or personal, that the store does not have). Files with the state `same` need nothing. Files with the state `unreadable` cannot be taken: show their `error`, never name them in `--files`, and say that `update everything shown` leaves them out (the command lists them under `skipped`). Because any update makes the store profile current, a skipped file is not offered again later; recommend `skip` now, fixing the file, and running `/cfp:init` again, so the update can include it.
 3. Ask (AskUserQuestion) what to do:
    - `update everything shown`: offer it only when a file other than `profile.md` is changed or missing.
    - `update the profile only`: `profile.md` is replaced, the other files stay as they are.
@@ -95,17 +108,19 @@ What the update does and does not do, to tell the user before they choose:
 - It replaces whole files. Hand edits in a replaced file are lost, which is why the diff comes first.
 - The approval of the profile and of every replaced event stays as it was.
 - Files that only the store has (events the user added, examples of accepted proposals) are never touched.
-- After `update the profile only`, the store profile is current and the skipped files are not offered again. Their shipped copies stay readable under `$PLUGIN_ROOT/knowledge-base/profiles/<profile>/`.
+- After `update the profile only`, or after `update everything shown` with unreadable files left out, the store profile is current and the skipped files are not offered again. Their seed copies stay under `seed_dir`; to take a skipped file later, copy it into the store profile by hand or raise the seed's `seed_version` again.
 - After `skip`, the store copy stays as it is and the next `/cfp:init` run offers the update again.
 
 ## Step 7: Report
 
 Print a short summary:
 
-- Store path
+- Store path (absolute)
+- Config file (`config_write_path` from Step 5, or `config_write_path` from `config show` when Step 1 kept the store)
+- Personal profiles folder (`user_profiles_dir` from Step 5 or from `config show`): put personal conference profiles here
 - Seeded profiles (from `seeded_profiles` of Step 5), or "no new profiles seeded (already present)"
-- Shipped profile updates applied or skipped in Step 6, with the versions
+- Seed profile updates applied or skipped in Step 6, with the versions and the source (shipped or personal)
 - Speaker, company, voice profile, review rounds
 - Next command: `/cfp:draft` to start a proposal, `/cfp:bio new` to add a bio first, `/cfp:profile list` to see the conferences and their deadlines
 
-Mention that every store file is plain markdown with front matter and can be edited in Obsidian.
+Mention that every store file is plain markdown with front matter and can be edited in any editor or opened as an Obsidian vault.
